@@ -1,0 +1,21 @@
+<!--
+/**
+ * Delivery time for a Quickshipper courier that takes one.
+ */
+-->
+<div class="field shubo-qshpr-delivery-time" data-bind="visible: isVisible">
+    <label class="label" for="shubo-qshpr-delivery-time">
+        <span data-bind="i18n: 'Delivery time'"></span>
+    </label>
+    <div class="control">
+        <select class="select" id="shubo-qshpr-delivery-time" name="shubo_qshpr_delivery_time"
+                data-bind="
+                    options: slots,
+                    optionsText: 'label',
+                    optionsValue: 'value',
+                    optionsCaption: $t('As soon as possible'),
+                    value: value,
+                    valueAllowUnset: true">
+        </select>
+    </div>
+</div>

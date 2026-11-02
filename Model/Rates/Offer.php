@@ -19,6 +19,7 @@ class Offer
      *     what is taken from the merchant's Quickshipper balance.
      * @param int $serviceFee Quickshipper's service fee in tetri, the part of $amount that is not the courier's.
      * @param string $logoUrl The courier's logo as Quickshipper sends it; '' when none.
+     * @param bool $takesTime Whether the courier takes a delivery time (scheduled delivery).
      */
     public function __construct(
         public readonly int $providerId,
@@ -28,6 +29,7 @@ class Offer
         public readonly int $amount,
         public readonly int $serviceFee,
         public readonly string $logoUrl = '',
+        public readonly bool $takesTime = false,
     ) {
     }
 

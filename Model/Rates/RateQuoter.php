@@ -205,6 +205,7 @@ class RateQuoter
                     Money::toTetri($price['amount']),
                     is_numeric($fee['serviceFee'] ?? null) ? Money::toTetri($fee['serviceFee']) : 0,
                     is_string($fee['providerLogoUrl'] ?? null) ? $fee['providerLogoUrl'] : '',
+                    ($fee['hasScheduledDelivery'] ?? false) === true,
                 );
             }
         }

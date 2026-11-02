@@ -50,6 +50,12 @@ class Config
     private const string FIELD_CAR_DELIVERY_ATTRIBUTE = 'car_delivery_attribute';
     private const string FIELD_CAR_DELIVERY_DEFAULT = 'car_delivery_default';
     private const string FIELD_CAR_DELIVERY_FROM_WEIGHT = 'car_delivery_from_weight';
+    private const string FIELD_SCHEDULE_ENABLED = 'schedule/enabled';
+    private const string FIELD_SCHEDULE_DAYS = 'schedule/days';
+    private const string FIELD_SCHEDULE_FIRST_HOUR = 'schedule/first_hour';
+    private const string FIELD_SCHEDULE_LAST_HOUR = 'schedule/last_hour';
+    private const string FIELD_SCHEDULE_SLOT_HOURS = 'schedule/slot_hours';
+    private const string FIELD_SCHEDULE_NOTICE_HOURS = 'schedule/notice_hours';
     private const string FIELD_PICKUP_LATITUDE = 'pickup_latitude';
     private const string FIELD_PICKUP_LONGITUDE = 'pickup_longitude';
     private const string GEOCODING_GROUP = 'geocoding/';
@@ -81,6 +87,17 @@ class Config
      * a booking takes 7–10 s.
      */
     private const int DEFAULT_TIMEOUT_SECONDS = 20;
+
+    /**
+     * Scheduled delivery fallbacks for missing or zero settings: tomorrow and
+     * the day after, 10:00 to 20:00 in two-hour slots, two hours' notice.
+     */
+    private const int DEFAULT_SCHEDULE_DAYS = 2;
+    private const int DEFAULT_SCHEDULE_FIRST_HOUR = 10;
+    private const int DEFAULT_SCHEDULE_LAST_HOUR = 20;
+    private const int DEFAULT_SCHEDULE_SLOT_HOURS = 2;
+    private const int DEFAULT_SCHEDULE_NOTICE_HOURS = 2;
+    private const int HOURS_PER_DAY = 24;
 
     /**
      * @param ScopeConfigInterface $scopeConfig
@@ -348,6 +365,82 @@ class Config
         $value = trim((string)$this->getValue(self::FIELD_CAR_DELIVERY_FROM_WEIGHT, $storeId));
 
         return is_numeric($value) && (float)$value > 0 ? (float)$value : null;
+    }
+
+    /**
+     * Whether customers may choose a delivery time for couriers that take one.
+     *
+     * @param int|null $storeId
+     * @return bool
+     */
+    public function isScheduleEnabled(?int $storeId = null): bool
+    {
+        return (bool)$this->getValue(self::FIELD_SCHEDULE_ENABLED, $storeId);
+    }
+
+    /**
+     * How many days ahead a delivery time can be chosen (today counts as day 0).
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleDays(?int $storeId = null): int
+    {
+        $days = (int)$this->getValue(self::FIELD_SCHEDULE_DAYS, $storeId);
+
+        return $days > 0 ? $days : self::DEFAULT_SCHEDULE_DAYS;
+    }
+
+    /**
+     * Hour (store time) the first delivery slot of a day starts.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleFirstHour(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_SCHEDULE_FIRST_HOUR, $storeId);
+
+        return $hour > 0 && $hour < self::HOURS_PER_DAY ? $hour : self::DEFAULT_SCHEDULE_FIRST_HOUR;
+    }
+
+    /**
+     * Hour (store time) the last delivery slot of a day ends.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleLastHour(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_SCHEDULE_LAST_HOUR, $storeId);
+
+        return $hour > 0 && $hour <= self::HOURS_PER_DAY ? $hour : self::DEFAULT_SCHEDULE_LAST_HOUR;
+    }
+
+    /**
+     * Length of one delivery slot in hours.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleSlotHours(?int $storeId = null): int
+    {
+        $hours = (int)$this->getValue(self::FIELD_SCHEDULE_SLOT_HOURS, $storeId);
+
+        return $hours > 0 ? $hours : self::DEFAULT_SCHEDULE_SLOT_HOURS;
+    }
+
+    /**
+     * Hours between placing the order and the earliest slot that can be chosen.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleNoticeHours(?int $storeId = null): int
+    {
+        $hours = (int)$this->getValue(self::FIELD_SCHEDULE_NOTICE_HOURS, $storeId);
+
+        return $hours > 0 ? $hours : self::DEFAULT_SCHEDULE_NOTICE_HOURS;
     }
 
     /**
