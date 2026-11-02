@@ -134,7 +134,12 @@ function viewModel($om, array $overrides, bool $allowed): AdminBalance
 
 $on = [P . 'show_balance' => '1', P . 'username' => 'shop@example.com'];
 check('header: shown when on, login saved and allowed', viewModel($om, $on, true)->isVisible());
-check('header: hidden by default (config.xml)', !viewModel($om, [P . 'username' => 'shop@example.com'], true)->isVisible());
+// The default as config.xml ships it, not the store's saved setting: a store
+// that switched the balance on must not fail this check.
+$defaults = simplexml_load_file(dirname(__DIR__, 2) . '/etc/config.xml')->default->carriers->shuboqshpr;
+check('header: hidden by default (config.xml)', (string)$defaults->show_balance === '0'
+    && !viewModel($om, [P . 'show_balance' => (string)$defaults->show_balance, P . 'username' => 'shop@example.com'], true)
+        ->isVisible());
 check('header: hidden when switched off', !viewModel($om, [P . 'show_balance' => '0'] + $on, true)->isVisible());
 check('header: hidden without a login', !viewModel($om, [P . 'username' => ''] + $on, true)->isVisible());
 check('header: hidden for admins who may not create shipments', !viewModel($om, $on, false)->isVisible());
