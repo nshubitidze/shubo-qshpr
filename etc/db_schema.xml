@@ -31,6 +31,8 @@
                 comment="Drop-off latitude the customer was quoted for"/>
         <column xsi:type="decimal" name="dropoff_longitude" scale="7" precision="10" nullable="true"
                 comment="Drop-off longitude the customer was quoted for"/>
+        <column xsi:type="varchar" name="scheduled_time" nullable="true" length="20"
+                comment="Delivery time the customer chose, slot start in UTC (ISO 8601); null = as soon as possible"/>
         <column xsi:type="int" name="paid_amount" unsigned="true" nullable="false" default="0"
                 comment="Shipping the customer paid for this delivery, in tetri (0 for an extra delivery)"/>
         <column xsi:type="int" name="charged_amount" unsigned="true" nullable="true"
@@ -89,5 +91,11 @@
             <column name="shipment_id"/>
             <column name="state"/>
         </index>
+    </table>
+    <!-- The delivery time chosen at checkout, kept with the quote's shipping
+         address until the order is placed (then it moves to the delivery row). -->
+    <table name="quote_address">
+        <column xsi:type="varchar" name="shubo_qshpr_delivery_time" nullable="true" length="20"
+                comment="Quickshipper delivery time chosen at checkout, slot start in UTC (ISO 8601)"/>
     </table>
 </schema>

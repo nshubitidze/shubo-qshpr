@@ -171,6 +171,64 @@
                     <validate>validate-number</validate>
                 </field>
 
+                <group id="schedule" translate="label comment" type="text" sortOrder="95"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Delivery Time</label>
+                    <comment>Lets the customer choose a later delivery time instead of "as soon as possible". Offered for the couriers that Quickshipper says take a delivery time. The courier is booked for that time when the shipment is submitted. Quickshipper does not publish how far ahead or at which hours each courier accepts a time; keep the slots within your couriers' working hours.</comment>
+
+                    <field id="enabled" translate="label comment" type="select" sortOrder="10"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Let Customers Choose a Delivery Time</label>
+                        <comment>Yes: for a courier that Quickshipper says takes a delivery time, checkout shows a "Delivery time" list with "As soon as possible" and the slots set below. No: every delivery is as soon as possible. In the Quickshipper dashboard, let orders assign the courier automatically: with "after confirmation", Quickshipper was seen to replace the chosen time with "now" when the booking is confirmed (you are told in the order's history).</comment>
+                        <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    </field>
+                    <field id="days" translate="label comment" type="text" sortOrder="20"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Days Ahead</label>
+                        <comment>How many days after today can be chosen. Default: 2.</comment>
+                        <validate>validate-digits validate-greater-than-zero</validate>
+                        <depends>
+                            <field id="enabled">1</field>
+                        </depends>
+                    </field>
+                    <field id="first_hour" translate="label comment" type="text" sortOrder="30"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>First Slot Starts at (hour)</label>
+                        <comment>Store time, 1–23. Default: 10.</comment>
+                        <validate>validate-digits validate-digits-range digits-range-1-23</validate>
+                        <depends>
+                            <field id="enabled">1</field>
+                        </depends>
+                    </field>
+                    <field id="last_hour" translate="label comment" type="text" sortOrder="40"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Last Slot Ends at (hour)</label>
+                        <comment>Store time, 2–24. Default: 20.</comment>
+                        <validate>validate-digits validate-digits-range digits-range-2-24</validate>
+                        <depends>
+                            <field id="enabled">1</field>
+                        </depends>
+                    </field>
+                    <field id="slot_hours" translate="label comment" type="text" sortOrder="50"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Slot Length (hours)</label>
+                        <comment>Default: 2 (10:00–12:00, 12:00–14:00, …).</comment>
+                        <validate>validate-digits validate-greater-than-zero</validate>
+                        <depends>
+                            <field id="enabled">1</field>
+                        </depends>
+                    </field>
+                    <field id="notice_hours" translate="label comment" type="text" sortOrder="60"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Minimum Notice (hours)</label>
+                        <comment>A slot must start at least this long after the order is placed, so there is time to prepare the parcel. Default: 2.</comment>
+                        <validate>validate-digits validate-greater-than-zero</validate>
+                        <depends>
+                            <field id="enabled">1</field>
+                        </depends>
+                    </field>
+                </group>
+
                 <group id="geocoding" translate="label comment" type="text" sortOrder="100"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Address Geocoding</label>

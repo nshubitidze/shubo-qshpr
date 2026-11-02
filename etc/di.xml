@@ -127,10 +127,11 @@
         </arguments>
     </type>
 
-    <!-- Courier logos on Quickshipper shipping methods. Global, not frontend:
+    <!-- Courier logos and "takes a delivery time" on Quickshipper shipping methods. Global, not frontend:
          checkout asks for shipping methods through the REST API (webapi_rest). -->
     <type name="Magento\Quote\Model\Cart\ShippingMethodConverter">
         <plugin name="shubo_qshpr_courier_logo" type="Shubo\Qshpr\Plugin\ShippingMethodLogo"/>
+        <plugin name="shubo_qshpr_takes_time" type="Shubo\Qshpr\Plugin\ShippingMethodDeliveryTime"/>
     </type>
 
     <!-- The merchant's "Car Delivery Attribute" loaded with cart items. Global:
@@ -147,6 +148,12 @@
                 <item name="cashondelivery" xsi:type="string">cashondelivery</item>
             </argument>
         </arguments>
+    </type>
+
+    <!-- The delivery time chosen at checkout. Global, not frontend: checkout
+         saves the shipping step through the REST API (webapi_rest). -->
+    <type name="Magento\Checkout\Model\ShippingInformationManagement">
+        <plugin name="shubo_qshpr_save_delivery_time" type="Shubo\Qshpr\Plugin\SaveDeliveryTime"/>
     </type>
 
     <!-- Keep the credentials out of config dumps/exports. -->

@@ -27,7 +27,8 @@
             "dispatch_attempts": true,
             "last_error": true,
             "created_at": true,
-            "updated_at": true
+            "updated_at": true,
+            "scheduled_time": true
         },
         "index": {
             "SHUBO_QSHPR_DELIVERY_ORDER_ID": true,
@@ -40,6 +41,11 @@
         "constraint": {
             "PRIMARY": true,
             "SHUBO_QSHPR_DELIVERY_QSHPR_ORDER_ID": true
+        }
+    },
+    "quote_address": {
+        "column": {
+            "shubo_qshpr_delivery_time": true
         }
     }
 }

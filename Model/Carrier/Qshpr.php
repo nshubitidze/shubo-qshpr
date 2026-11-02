@@ -21,6 +21,7 @@ use Shubo\Qshpr\Model\Money;
 use Shubo\Qshpr\Model\OrderStatus;
 use Shubo\Qshpr\Model\Rates\CourierLogos;
 use Shubo\Qshpr\Model\Rates\RateQuoter;
+use Shubo\Qshpr\Model\Schedule\ScheduledCouriers;
 use Shubo\Qshpr\Model\Ui\ConfigProvider;
 
 /**
@@ -54,6 +55,7 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
      * @param CourierLogos $courierLogos
      * @param CashOnDelivery $cashOnDelivery
      * @param Config $config
+     * @param ScheduledCouriers $scheduledCouriers
      * @param array<string, mixed> $data
      */
     public function __construct(
@@ -68,6 +70,7 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
         private readonly CourierLogos $courierLogos,
         private readonly CashOnDelivery $cashOnDelivery,
         private readonly Config $config,
+        private readonly ScheduledCouriers $scheduledCouriers,
         array $data = [],
     ) {
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
@@ -114,6 +117,7 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
             $result->append($method);
             $this->courierLogos->remember($offer->providerId, $offer->logoUrl);
             $this->cashOnDelivery->remember($offer->providerId, $offer->collectsCash);
+            $this->scheduledCouriers->remember($offer->providerId, $offer->takesTime);
         }
 
         return $result;

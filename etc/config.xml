@@ -32,6 +32,14 @@
                 <show_logos>1</show_logos>
                 <customer_pays_service_fee>1</customer_pays_service_fee>
                 <car_delivery_default>0</car_delivery_default>
+                <schedule>
+                    <enabled>0</enabled>
+                    <days>2</days>
+                    <first_hour>10</first_hour>
+                    <last_hour>20</last_hour>
+                    <slot_hours>2</slot_hours>
+                    <notice_hours>2</notice_hours>
+                </schedule>
                 <geocoding>
                     <geocoder>nominatim</geocoder>
                     <nominatim_url>https://nominatim.openstreetmap.org</nominatim_url>
