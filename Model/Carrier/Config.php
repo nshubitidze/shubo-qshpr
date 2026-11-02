@@ -44,10 +44,11 @@ class Config
     private const string FIELD_CAR_DELIVERY_FROM_WEIGHT = 'car_delivery_from_weight';
     private const string FIELD_SCHEDULE_ENABLED = 'schedule/enabled';
     private const string FIELD_SCHEDULE_DAYS = 'schedule/days';
-    private const string FIELD_SCHEDULE_FIRST_HOUR = 'schedule/first_hour';
-    private const string FIELD_SCHEDULE_LAST_HOUR = 'schedule/last_hour';
     private const string FIELD_SCHEDULE_SLOT_HOURS = 'schedule/slot_hours';
     private const string FIELD_SCHEDULE_NOTICE_HOURS = 'schedule/notice_hours';
+    private const string FIELD_OPENING_HOURS_KEPT = 'opening_hours/kept';
+    private const string FIELD_OPENS_AT = 'opening_hours/opens_at';
+    private const string FIELD_CLOSES_AT = 'opening_hours/closes_at';
     private const string FIELD_PICKUP_LATITUDE = 'pickup_latitude';
     private const string FIELD_PICKUP_LONGITUDE = 'pickup_longitude';
     private const string GEOCODING_GROUP = 'geocoding/';
@@ -81,14 +82,15 @@ class Config
     private const int DEFAULT_TIMEOUT_SECONDS = 20;
 
     /**
-     * Scheduled delivery fallbacks for missing or zero settings: tomorrow and
-     * the day after, 10:00 to 20:00 in two-hour slots, two hours' notice.
+     * Scheduled delivery and opening hours fallbacks for missing or zero
+     * settings: tomorrow and the day after, two-hour slots, two hours'
+     * notice, open 10:00 to 20:00.
      */
     private const int DEFAULT_SCHEDULE_DAYS = 2;
-    private const int DEFAULT_SCHEDULE_FIRST_HOUR = 10;
-    private const int DEFAULT_SCHEDULE_LAST_HOUR = 20;
     private const int DEFAULT_SCHEDULE_SLOT_HOURS = 2;
     private const int DEFAULT_SCHEDULE_NOTICE_HOURS = 2;
+    private const int DEFAULT_OPENS_AT = 10;
+    private const int DEFAULT_CLOSES_AT = 20;
     private const int HOURS_PER_DAY = 24;
 
     /**
@@ -379,32 +381,6 @@ class Config
     }
 
     /**
-     * Hour (store time) the first delivery slot of a day starts.
-     *
-     * @param int|null $storeId
-     * @return int
-     */
-    public function getScheduleFirstHour(?int $storeId = null): int
-    {
-        $hour = (int)$this->getValue(self::FIELD_SCHEDULE_FIRST_HOUR, $storeId);
-
-        return $hour > 0 && $hour < self::HOURS_PER_DAY ? $hour : self::DEFAULT_SCHEDULE_FIRST_HOUR;
-    }
-
-    /**
-     * Hour (store time) the last delivery slot of a day ends.
-     *
-     * @param int|null $storeId
-     * @return int
-     */
-    public function getScheduleLastHour(?int $storeId = null): int
-    {
-        $hour = (int)$this->getValue(self::FIELD_SCHEDULE_LAST_HOUR, $storeId);
-
-        return $hour > 0 && $hour <= self::HOURS_PER_DAY ? $hour : self::DEFAULT_SCHEDULE_LAST_HOUR;
-    }
-
-    /**
      * Length of one delivery slot in hours.
      *
      * @param int|null $storeId
@@ -428,6 +404,45 @@ class Config
         $hours = (int)$this->getValue(self::FIELD_SCHEDULE_NOTICE_HOURS, $storeId);
 
         return $hours > 0 ? $hours : self::DEFAULT_SCHEDULE_NOTICE_HOURS;
+    }
+
+    /**
+     * Whether couriers are booked only while the shop is open.
+     *
+     * Outside the hours, checkout says when the courier comes and automatic booking waits.
+     *
+     * @param int|null $storeId
+     * @return bool
+     */
+    public function keepsOpeningHours(?int $storeId = null): bool
+    {
+        return (bool)$this->getValue(self::FIELD_OPENING_HOURS_KEPT, $storeId);
+    }
+
+    /**
+     * Hour (store time) the shop opens; delivery slots start from it.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getOpensAt(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_OPENS_AT, $storeId);
+
+        return $hour > 0 && $hour < self::HOURS_PER_DAY ? $hour : self::DEFAULT_OPENS_AT;
+    }
+
+    /**
+     * Hour (store time) the shop closes; delivery slots end by it.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getClosesAt(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_CLOSES_AT, $storeId);
+
+        return $hour > 0 && $hour <= self::HOURS_PER_DAY ? $hour : self::DEFAULT_CLOSES_AT;
     }
 
     /**
