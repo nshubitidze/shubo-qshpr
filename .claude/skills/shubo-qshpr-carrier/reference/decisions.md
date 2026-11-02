@@ -1,8 +1,7 @@
 # Design decisions — and why
 
 These are settled. Do not undo one as a side effect of another change; if a
-change needs to, say so and get agreement first. Open (undecided) items are
-in `docs/DEVELOPMENT_PLAN.md`.
+change needs to, say so and get agreement first.
 
 ## Checkout and price
 
@@ -98,8 +97,3 @@ in `docs/DEVELOPMENT_PLAN.md`.
   built-in secrets are always masked.
 - **HTTP status codes from `Laminas\Http\Response::STATUS_CODE_*`**, not
   module constants or bare numbers.
-
-## Deferred (not decided; do not build without agreement)
-
-- Address → coordinates UX for the customer (geocode only / map pin / both).
-- Customer price policy (markup, free-shipping threshold).

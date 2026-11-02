@@ -24,22 +24,20 @@ courier again. Every delivery is recorded in `shubo_qshpr_delivery`.
   `SKILL.md`: architecture, settings, flows, design decisions and why,
   how to change things, troubleshooting and known limits.
 - **Vendor skill** `.claude/skills/quickshipper-integration-skill/` —
-  Quickshipper API facts, live sandbox behaviour, business terms, open
-  questions. Every Quickshipper fact comes from here.
-- `docs/DEVELOPMENT_PLAN.md` — what is built, what is on branches, what is
-  open and not decided.
+  Quickshipper API facts, how the API actually behaves, open questions.
+  Every Quickshipper fact comes from here.
 - `docs/QA_GUIDE.md` — gates, check suites, browser tests, sandbox rules.
 - `docs/QA_ISSUES.md` — known issues.
 - `dev/checks/` — PHP check suites (`QSHPR_OFFLINE=1` sends nothing to
-  Quickshipper) and sandbox tools; `dev/qa-e2e/` — Playwright browser tests;
-  `dev/webhook-watch/` — captures Quickshipper's webhook calls.
+  Quickshipper), test products and the webhook tool; `dev/qa-e2e/` —
+  Playwright browser tests; `dev/webhook-watch/` — captures Quickshipper's
+  webhook calls.
 
 ## Working rules
 
 - Read the class docblocks and the skill's `decisions.md` before changing an
   area. Do not undo a decision as a side effect; if a change needs to, ask
-  first. Items under "Open — not decided" in the plan are not to be built
-  without agreement.
+  first.
 - Ground every Quickshipper fact in the vendor skill with its source tag
   (`[docs]`, `[spec]`, `[live YYYY-MM-DD]`). Not covered → an open question,
   never a guess. Live behaviour wins over the docs; record it in the vendor

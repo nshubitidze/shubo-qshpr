@@ -109,8 +109,6 @@ stub client.
 
 | Tool | Does |
 |---|---|
-| `dev/checks/qshpr-order-probe.php` | creates ONE real sandbox order for one courier, reads it back, confirms a Draft, cancels it, prints every answer (`cancel <id>` cancels) |
-| `dev/checks/qshpr-order-watch.php` | follows one order and prints every change (read-only) |
 | `dev/checks/qshpr-webhook.php` | lists, registers or switches webhooks on the sandbox account (there is no delete) |
 | `dev/webhook-watch/run.sh` | a public HTTPS URL (Cloudflare quick tunnel + capture container) that records Quickshipper's webhook calls; can forward them to the store |
 

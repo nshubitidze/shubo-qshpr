@@ -1,60 +1,54 @@
 ---
 name: quickshipper-integration-skill
-description: Quickshipper (qshpr.com, Georgian delivery aggregator — Wolt, Glovo, OnWay and other couriers behind one API) ground truth for the Delivery API and the Delivery Button widget — OAuth token, rate quotes (/v1/Order/fees, /weights), order create/edit/confirm/cancel/track, waybill, webhooks, statuses, error shapes, sandbox vs production hosts, business terms and pricing. Use when designing, implementing, reviewing, testing or debugging any Quickshipper integration, including the Shubo_Qshpr Magento carrier.
+description: Quickshipper (qshpr.com, Georgian delivery aggregator — Wolt, Glovo, OnWay and other couriers behind one API) Delivery API facts — OAuth token, prices (/v1/Order/fees), order create / confirm / cancel / read, webhooks, statuses, error shapes, sandbox vs production, and how the API actually behaves. Use when changing, testing or debugging code that talks to Quickshipper, including the Shubo_Qshpr Magento carrier.
 ---
 
-# Quickshipper integration skill
+# Quickshipper Delivery API
 
-Third-party ground truth for **Quickshipper**. Never invent Quickshipper
-behaviour: every fact here is tagged with its source, and anything not
-covered is an **open question** (see `reference/open-questions.md`), not
-something to guess.
+Facts about Quickshipper's API that the module relies on. **Never invent
+Quickshipper behaviour**: if it is not here, it is in
+`reference/open-questions.md` or unknown.
 
-Source tags used throughout:
+Every fact carries its source:
 
-- **[docs]** — public docs at https://app.theneo.io/quickshipper/delivery-en/quickshipper-delivery-api
-  Incomplete, and wrong in places.
-- **[spec]** — the OpenAPI spec the servers publish themselves
-  (https://delivery-test.quickshipper.ge/swagger/v1/swagger.json and
-  https://delivery.quickshipper.app/swagger/v1/swagger.json; our readable
-  summary: `source/openapi-summary.md`). **More complete and more accurate than
-  the docs — prefer it.**
-- **[live YYYY-MM-DD]** — observed against the sandbox. Wins over both when
-  they disagree. See `reference/live-findings.md`.
+- **[docs]** — Quickshipper's public docs:
+  https://app.theneo.io/quickshipper/delivery-en/quickshipper-delivery-api
+  (incomplete, wrong in places).
+- **[spec]** — the OpenAPI spec the servers publish (more complete, prefer it):
+  sandbox https://delivery-test.quickshipper.ge/swagger/v1/swagger.json,
+  production https://delivery.quickshipper.app/swagger/v1/swagger.json.
+- **[live YYYY-MM-DD]** — observed against the sandbox; wins when it
+  disagrees with the other two.
 
-## Read in this order
+## Files
 
-1. `reference/api.md` — hosts, auth, every endpoint we care about, response
-   envelope, error shapes, statuses.
-2. `reference/live-findings.md` — how the sandbox actually behaves (rates by
-   city and weight, error envelopes, doc errors).
-3. `reference/delivery-button.md` — the hosted checkout widget (ApiKey-based).
-4. `reference/business.md` — company, how merchants use it, terms, pricing.
-5. `reference/open-questions.md` — what is still unknown / must be asked.
+1. `reference/api.md` — hosts, authentication, response shapes, the
+   endpoints the module uses, statuses.
+2. `reference/live-findings.md` — how the API actually behaves: prices,
+   booking, Drafts, cancelling, webhooks, sandbox quirks, terms that matter.
+3. `reference/open-questions.md` — what is still unknown.
+
+For any field not described here, read the spec.
 
 ## Five facts that shape any integration
 
-1. **Two credentials, two integrations.** The server-side Delivery API uses an
-   OAuth2 **password grant** (merchant's Quickshipper login) → Bearer token.
-   The Delivery Button widget uses the per-account **ApiKey** (Profile →
-   Integration). `POST /v1/Order/confirm` accepts either. [docs][spec]
-2. **Coordinates are mandatory.** Quotes and orders are priced from
-   latitude/longitude, not postcodes. Street/city strings alone are not enough.
-   [docs][spec][live]
-3. **HTTP 200 does not mean success.** Business errors come back as HTTP 200
-   with `success:false` and the real code in the body's `httpStatusCode`.
-   Transport/auth and validation errors use two other, different JSON shapes.
-   [live 2026-09-29]
-4. **Money is decimal GEL** (`amount: 6.6`, `currencyName: "GEL"`). Convert
-   to integer tetri at our boundary. `serviceFee` is reported separately
-   from `amount`. [live 2026-09-29]
-5. **Coverage is intra-city.** In the sandbox, quotes exist for
-   Tbilisi→Tbilisi and Batumi→Batumi only; intercity and Tbilisi→Rustavi return an
-   empty `fees` list. An empty list is a normal "no delivery offered" answer.
-   [live 2026-09-29]
+1. **OAuth2 password grant** with the merchant's dashboard login, on a
+   separate auth host, form-encoded. The account's ApiKey does not
+   authenticate the Delivery API. [docs][spec][live]
+2. **Coordinates are mandatory.** Quickshipper does not geocode; an address
+   sent as text only is priced at 0,0. [live]
+3. **HTTP 200 does not mean success.** Business errors are HTTP 200 with
+   `success:false` and the real code in the body's `httpStatusCode`; auth and
+   validation errors use two other shapes. [live]
+4. **Money is decimal GEL**, and a price's `amount` already includes
+   Quickshipper's `serviceFee`. [live]
+5. **The delivery price is taken from the prepaid balance when the order is
+   created**; whether it is created as a Draft depends on the merchant's
+   dashboard setting. [live]
 
-## Credentials policy
+## Credentials
 
-Only sandbox credentials, never in shipped files. The sandbox OAuth client
-`DeliveryApiClient:DeliveryApiSecret` is public (published in the docs); the
-production client credentials are **not** published — ask Quickshipper.
+Only Quickshipper's public sandbox OAuth client
+(`DeliveryApiClient:DeliveryApiSecret`, from the docs) may appear in code.
+Merchant logins, the production client and the ApiKey are secrets: never in
+a repository, always masked in logs.

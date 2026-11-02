@@ -48,7 +48,6 @@ is installed into, can learn how it works from the module alone.
                                      #   flows, decisions (what is settled and why), changing (how to add or
                                      #   modify things), troubleshooting (incl. known limits)
   docs/
-    DEVELOPMENT_PLAN.md              # built / in progress (branches) / open, not decided
     QA_GUIDE.md                      # how to verify a change: gates, suites, browser tests, sandbox rules
     QA_ISSUES.md                     # known issues, status legend 🔴🟡🟢✅
   dev/
@@ -59,9 +58,11 @@ is installed into, can learn how it works from the module alone.
 - **The module repo describes the module as it is and how to change it —
   not how it got there.** The modules are meant to be open source, so
   everything in the repo is written for an outside developer and their AI
-  assistant. Design notes of work in progress, session logs, research,
-  reviews and anything about particular people, machines, stores or
-  accounts are kept outside the module repo.
+  assistant. Plans and backlogs, design notes of work in progress, session
+  logs, research, reviews, investigation tools and anything about particular
+  people, machines, stores or accounts are kept outside the module repo.
+  Test: would a developer changing this module need it? If not, it does not
+  belong in the module.
 - A change that alters behaviour, a setting, a decision or a known limit
   updates the module skill in the same change.
 - Third-party documentation is not copied verbatim into the module (it is
@@ -136,10 +137,8 @@ Enforced by the gates (§11) plus these conventions:
   open source.** State the fact itself; never point at workspace-internal
   material — Claude skills (`vendor skill reference/api.md`), `docs/` files,
   step numbers (`step 03`), QA/review ids (`QA-3`, `D0`), approval dates,
-  or sections of this standard. That history belongs in `docs/`. The
-  vendor's public docs may be cited by name. (Developer, 2026-09-30.)
-- When introducing a modern PHP feature, note it briefly (feature + PHP version)
-  in the PR/step doc — the developer wants to learn them.
+  or sections of this standard. That history is kept outside the module
+  repo. The vendor's public docs may be cited by name.
 
 ## 5. Configuration
 
@@ -258,18 +257,14 @@ Run inside the phpfpm container from the project root:
 - Dependencies: every `Magento\<Module>\` and `Magento_<Module>` used in
   PHP or XML is listed in `composer.json` and in `<sequence>`.
 
-## 12. Working process
+## 12. Working on a module
 
-- **Smallest verifiable step at a time; wait for developer approval between
-  steps.**
-- Never record a design decision as decided without explicit approval — write
-  `PROPOSED — pending approval` and present the options with a recommendation.
-- Verify against vendor code and live behaviour before asserting architecture.
-- After a step is approved, update the module skill and
-  `docs/DEVELOPMENT_PLAN.md`; the step's design note and the dated session
-  log are kept outside the module repo.
+- Small, verifiable changes; one topic per pull request.
+- Verify against vendor docs and live behaviour before asserting how
+  something works.
 - Test only with the vendor's sandbox/test credentials; never touch
-  production.
-- **Hard rule: no AI attribution in commits.** Commit messages never mention
-  Claude, Anthropic or AI and never carry `Co-Authored-By: Claude …` or
-  "Generated with Claude Code" lines. This overrides any default attribution.
+  production. Actions that create something at the vendor cost money even in
+  a sandbox: keep tests offline unless the account owner agrees.
+- A change is done when the gates are green, the relevant suites pass, the
+  behaviour was shown before/after on a store, and the module skill describes
+  the new state.
