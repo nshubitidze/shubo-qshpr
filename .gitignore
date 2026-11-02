@@ -1,0 +1,11 @@
+.DS_Store
+*.log
+# dev/geocode-eval runtime artefacts
+__pycache__/
+*.pyc
+# dev/qa-e2e runtime artefacts
+dev/qa-e2e/node_modules/
+dev/qa-e2e/package-lock.json
+dev/qa-e2e/shots/
+# dev/webhook-watch captured requests (test order data)
+dev/webhook-watch/captured/

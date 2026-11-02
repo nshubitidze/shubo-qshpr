@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Dedicated log channel: var/log/shubo_qshpr.log. Call summaries and
+         errors are always written; full masked payload dumps only when
+         carriers/shuboqshpr/debug is enabled. -->
+    <virtualType name="ShuboQshprLogHandler" type="Magento\Framework\Logger\Handler\Base">
+        <arguments>
+            <argument name="fileName" xsi:type="string">/var/log/shubo_qshpr.log</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="ShuboQshprLogger" type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="name" xsi:type="string">shubo_qshpr</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">ShuboQshprLogHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Shubo\Qshpr\Model\QshprClient">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+
+    <type name="Shubo\Qshpr\Model\Carrier\Qshpr">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Rates\RateQuoter">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Dispatch\Dispatcher">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Status\StatusUpdater">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Status\WebhookRegistrar">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Controller\Adminhtml\Webhook\Connect">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Cron\StatusSync">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Controller\Webhook\Status">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Dispatch\Canceller">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Delivery\ShipmentNotes">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Observer\CancelOnRefund">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Cron\AutoDispatch">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Dispatch\AutoShipper">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Delivery\OrderNotes">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Cron\CleanUpDeliveries">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Observer\RecordDelivery">
+        <arguments>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+
+    <!-- Geocoders the merchant can pick in the admin, by code. A new one (e.g.
+         Google) is a ProviderInterface class plus one item here. -->
+    <type name="Shubo\Qshpr\Model\Geocoding\NominatimProvider">
+        <arguments>
+            <argument name="timeoutSeconds" xsi:type="number">5</argument>
+        </arguments>
+    </type>
+    <type name="Shubo\Qshpr\Model\Geocoding\Geocoder">
+        <arguments>
+            <!-- Each item's name is the provider's code, stored in the admin setting
+                 (config.xml's default geocoder must be one of them). -->
+            <argument name="providers" xsi:type="array">
+                <item name="nominatim" xsi:type="array">
+                    <item name="label" xsi:type="string" translatable="true">Nominatim (OpenStreetMap)</item>
+                    <item name="model" xsi:type="object">Shubo\Qshpr\Model\Geocoding\NominatimProvider</item>
+                </item>
+            </argument>
+            <argument name="logger" xsi:type="object">ShuboQshprLogger</argument>
+        </arguments>
+    </type>
+
+    <!-- Courier logos on Quickshipper shipping methods. Global, not frontend:
+         checkout asks for shipping methods through the REST API (webapi_rest). -->
+    <type name="Magento\Quote\Model\Cart\ShippingMethodConverter">
+        <plugin name="shubo_qshpr_courier_logo" type="Shubo\Qshpr\Plugin\ShippingMethodLogo"/>
+    </type>
+
+    <!-- The merchant's "Car Delivery Attribute" loaded with cart items. Global:
+         rates are collected in the storefront, the REST API and the admin. -->
+    <type name="Magento\Quote\Model\Quote\Config">
+        <plugin name="shubo_qshpr_car_delivery_attribute" type="Shubo\Qshpr\Plugin\QuoteItemCarDeliveryAttribute"/>
+    </type>
+
+    <!-- Payment methods where the courier collects the money. Magento's own
+         "Cash On Delivery" by default; add another module's method code here. -->
+    <type name="Shubo\Qshpr\Model\CashOnDelivery\CashOnDelivery">
+        <arguments>
+            <argument name="paymentMethods" xsi:type="array">
+                <item name="cashondelivery" xsi:type="string">cashondelivery</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Keep the credentials out of config dumps/exports. -->
+    <type name="Magento\Config\Model\Config\TypePool">
+        <arguments>
+            <argument name="sensitive" xsi:type="array">
+                <item name="carriers/shuboqshpr/password" xsi:type="string">1</item>
+                <item name="carriers/shuboqshpr/production_client_secret" xsi:type="string">1</item>
+                <item name="carriers/shuboqshpr/webhook_key" xsi:type="string">1</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

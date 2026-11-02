@@ -1,0 +1,62 @@
+<?php
+/** @var Magento\Backend\Block\Template $block */
+/** @var Magento\Framework\Escaper $escaper */
+/** @var Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+/** @var Shubo\Qshpr\ViewModel\AdminBalance $viewModel */
+
+$viewModel = $block->getData('view_model');
+
+if (!$viewModel->isVisible()) {
+    return;
+}
+
+$dashboardUrl = $viewModel->getDashboardUrl();
+$settingsUrl = $viewModel->getSettingsUrl();
+$account = $viewModel->isSandbox() ? __('Test account') : __('Live account');
+$url = $escaper->escapeJs($viewModel->getBalanceUrl());
+$unknown = $escaper->escapeJs((string)__('unavailable'));
+$scriptString = <<<script
+require(['jquery'], function ($) {
+    'use strict';
+
+    const values = $('.shubo-qshpr-balance [data-role="balance"]');
+
+    $.ajax({url: '{$url}', type: 'GET', dataType: 'json', data: {isAjax: true}})
+        .done(function (response) {
+            values.text(response && response.balance ? response.balance : '{$unknown}');
+        })
+        .fail(function () {
+            values.text('{$unknown}');
+        });
+});
+script;
+?>
+<div class="shubo-qshpr-balance admin__action-dropdown-wrap">
+    <a href="<?= $escaper->escapeUrl($dashboardUrl) ?>"
+       class="admin__action-dropdown"
+       title="<?= $escaper->escapeHtmlAttr(__('Quickshipper balance')) ?>"
+       data-mage-init='{"dropdown":{}}'
+       data-toggle="dropdown">
+        <span class="admin__action-dropdown-text" data-role="balance">…</span>
+    </a>
+    <ul class="admin__action-dropdown-menu" data-target="dropdown">
+        <li class="shubo-qshpr-balance-summary">
+            <span class="shubo-qshpr-balance-title"><?= $escaper->escapeHtml(__('Quickshipper balance')) ?></span>
+            <strong class="shubo-qshpr-balance-amount" data-role="balance">…</strong>
+            <span class="shubo-qshpr-balance-account"><?= $escaper->escapeHtml($account) ?></span>
+        </li>
+        <li>
+            <a href="<?= $escaper->escapeUrl($dashboardUrl) ?>" target="_blank" rel="noopener noreferrer">
+                <?= $escaper->escapeHtml(__('Top up in the Quickshipper dashboard')) ?>
+            </a>
+        </li>
+        <?php if ($settingsUrl !== null): ?>
+            <li>
+                <a href="<?= $escaper->escapeUrl($settingsUrl) ?>">
+                    <?= $escaper->escapeHtml(__('Quickshipper settings')) ?>
+                </a>
+            </li>
+        <?php endif; ?>
+    </ul>
+</div>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>

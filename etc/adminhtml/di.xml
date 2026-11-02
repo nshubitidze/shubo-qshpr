@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Submit Shipment (and Invoice → "Create Shipment") books the courier.
+         Admin only: shipments created elsewhere (e.g. REST API or ERP) are not
+         booked. -->
+    <type name="Magento\Sales\Model\Order\Shipment">
+        <plugin name="shubo_qshpr_book_courier" type="Shubo\Qshpr\Plugin\ShipmentRegisterPlugin"/>
+    </type>
+    <!-- Cancel / Book Courier Again buttons on the admin shipment page. -->
+    <type name="Magento\Shipping\Block\Adminhtml\View">
+        <plugin name="shubo_qshpr_shipment_buttons" type="Shubo\Qshpr\Plugin\ShipmentViewButtons"/>
+    </type>
+</config>

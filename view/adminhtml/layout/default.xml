@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  The merchant's Quickshipper balance in the admin header, on every admin page,
+  when "Show Balance in Admin Header" is on.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="Shubo_Qshpr::css/balance.css"/>
+    </head>
+    <body>
+        <referenceContainer name="header">
+            <block class="Magento\Backend\Block\Template"
+                   name="shubo.qshpr.balance"
+                   aclResource="Magento_Sales::shipment"
+                   template="Shubo_Qshpr::header/balance.phtml">
+                <arguments>
+                    <argument name="view_model" xsi:type="object">Shubo\Qshpr\ViewModel\AdminBalance</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
+        <!-- Magento's admin theme regroups the header items on the right. -->
+        <move element="shubo.qshpr.balance" destination="header.inner.right" after="user"/>
+    </body>
+</page>

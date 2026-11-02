@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <!-- /qshpr/webhook/status: Quickshipper's order status webhook. -->
+    <router id="standard">
+        <route id="qshpr" frontName="qshpr">
+            <module name="Shubo_Qshpr"/>
+        </route>
+    </router>
+</config>

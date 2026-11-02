@@ -1,0 +1,40 @@
+<?php
+/** @var Shubo\Qshpr\Block\Adminhtml\System\Config\ConnectStatusUpdates $block */
+/** @var Magento\Framework\Escaper $escaper */
+/** @var Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+
+$htmlId = $escaper->escapeHtmlAttr((string)$block->getData('html_id'));
+$url = $escaper->escapeJs($block->getConnectUrl());
+$failed = $escaper->escapeJs((string)__('The request failed. Reload the page and try again.'));
+
+$scriptString = <<<script
+require(['jquery'], function ($) {
+    'use strict';
+
+    const button = $('#{$htmlId}');
+    const result = $('#{$htmlId}_result');
+
+    button.on('click', function () {
+        button.prop('disabled', true);
+        $.ajax({
+            url: '{$url}',
+            type: 'POST',
+            dataType: 'json',
+            data: {form_key: window.FORM_KEY},
+            showLoader: true
+        }).done(function (response) {
+            result.text(response.message).toggleClass('admin__field-error', !response.success);
+        }).fail(function () {
+            result.text('{$failed}').addClass('admin__field-error');
+        }).always(function () {
+            button.prop('disabled', false);
+        });
+    });
+});
+script;
+?>
+<button type="button" class="action-default" id="<?= /* @noEscape */ $htmlId ?>">
+    <span><?= $escaper->escapeHtml(__('Connect status updates')) ?></span>
+</button>
+<p class="note" id="<?= /* @noEscape */ $htmlId ?>_result"></p>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>

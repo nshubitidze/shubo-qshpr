@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <carriers>
+            <!-- The carrier code has no underscore: Magento splits a shipping
+                 method code on its first underscore to find the carrier. -->
+            <shuboqshpr>
+                <active>0</active>
+                <model>Shubo\Qshpr\Model\Carrier\Qshpr</model>
+                <title>Quickshipper</title>
+                <sallowspecific>1</sallowspecific>
+                <specificcountry>GE</specificcountry>
+                <sort_order>10</sort_order>
+                <sandbox_mode>1</sandbox_mode>
+                <sandbox_auth_url>https://test-auth.quickshipper.ge</sandbox_auth_url>
+                <sandbox_api_url>https://delivery-test.quickshipper.ge</sandbox_api_url>
+                <production_auth_url>https://auth.quickshipper.app</production_auth_url>
+                <production_api_url>https://delivery.quickshipper.app</production_api_url>
+                <sandbox_dashboard_url>https://test.quickshipper.ge</sandbox_dashboard_url>
+                <production_dashboard_url>https://dashboard.quickshipper.app</production_dashboard_url>
+                <!-- PUBLIC sandbox OAuth client, published in Quickshipper's API
+                     docs (Authorization section) — not a secret. The production
+                     client is issued by Quickshipper and entered in the admin. -->
+                <sandbox_client_id>DeliveryApiClient</sandbox_client_id>
+                <sandbox_client_secret>DeliveryApiSecret</sandbox_client_secret>
+                <api_timeout>20</api_timeout>
+                <debug>0</debug>
+                <show_balance>0</show_balance>
+                <auto_dispatch>0</auto_dispatch>
+                <cancel_on_refund>0</cancel_on_refund>
+                <show_logos>1</show_logos>
+                <customer_pays_service_fee>1</customer_pays_service_fee>
+                <car_delivery_default>0</car_delivery_default>
+                <geocoding>
+                    <geocoder>nominatim</geocoder>
+                    <nominatim_url>https://nominatim.openstreetmap.org</nominatim_url>
+                    <address_clean_up>1</address_clean_up>
+                </geocoding>
+            </shuboqshpr>
+        </carriers>
+    </default>
+</config>
