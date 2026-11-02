@@ -20,6 +20,8 @@ use Shubo\Qshpr\Model\Money;
 use Shubo\Qshpr\Model\OrderStatus;
 use Shubo\Qshpr\Model\Rates\CourierLogos;
 use Shubo\Qshpr\Model\Rates\RateQuoter;
+use Shubo\Qshpr\Model\Schedule\DeliverySlots;
+use Shubo\Qshpr\Model\Schedule\OpeningHours;
 use Shubo\Qshpr\Model\Schedule\ScheduledCouriers;
 use Shubo\Qshpr\Model\Ui\ConfigProvider;
 
@@ -54,6 +56,8 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
      * @param CourierLogos $courierLogos
      * @param Config $config
      * @param ScheduledCouriers $scheduledCouriers
+     * @param OpeningHours $openingHours
+     * @param DeliverySlots $deliverySlots
      * @param array<string, mixed> $data
      */
     public function __construct(
@@ -68,6 +72,8 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
         private readonly CourierLogos $courierLogos,
         private readonly Config $config,
         private readonly ScheduledCouriers $scheduledCouriers,
+        private readonly OpeningHours $openingHours,
+        private readonly DeliverySlots $deliverySlots,
         array $data = [],
     ) {
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
@@ -102,13 +108,19 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
         $carrierTitle = (string)$this->getConfigData('title');
         $storeId = $request->getStoreId() !== null ? (int)$request->getStoreId() : null;
         $customerPaysFee = $this->config->isServiceFeeChargedToCustomer($storeId);
+        $opening = $this->openingHours->nextOpening($storeId);
+        $slotsOffered = $opening !== null && $this->deliverySlots->getSlots($storeId) !== [];
 
         foreach ($offers as $offer) {
             $method = $this->rateMethodFactory->create();
             $method->setCarrier($this->_code);
             $method->setCarrierTitle($carrierTitle);
             $method->setMethod($offer->methodCode());
-            $method->setMethodTitle($offer->title());
+            // While the shop is closed the courier cannot come "in 45-60 min":
+            // say when it is booked, unless the customer picks a delivery time.
+            $method->setMethodTitle($opening !== null && !($slotsOffered && $offer->takesTime)
+                ? (string)__('%1 (after we open, %2)', $offer->title(), $this->openingHours->describe($opening))
+                : $offer->title());
             $method->setPrice(Money::toGelAmount($offer->customerPrice(includeServiceFee: $customerPaysFee)));
             $method->setCost(Money::toGelAmount($offer->amount));
             $result->append($method);

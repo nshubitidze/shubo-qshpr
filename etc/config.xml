@@ -36,11 +36,14 @@
                 <schedule>
                     <enabled>0</enabled>
                     <days>2</days>
-                    <first_hour>10</first_hour>
-                    <last_hour>20</last_hour>
                     <slot_hours>2</slot_hours>
                     <notice_hours>2</notice_hours>
                 </schedule>
+                <opening_hours>
+                    <kept>0</kept>
+                    <opens_at>10</opens_at>
+                    <closes_at>20</closes_at>
+                </opening_hours>
                 <geocoding>
                     <geocoder>nominatim</geocoder>
                     <nominatim_url>https://nominatim.openstreetmap.org</nominatim_url>

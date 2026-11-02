@@ -408,6 +408,28 @@ class DeliveryLog
     }
 
     /**
+     * Automatic booking waits: the delivery is due again in $seconds.
+     *
+     * Only a row still due and quoted moves, so a booking made meanwhile is not touched.
+     *
+     * @param int $entityId
+     * @param int $seconds
+     * @return void
+     */
+    public function postponeDispatch(int $entityId, int $seconds): void
+    {
+        $this->resource->getConnection()->update(
+            $this->table(),
+            ['dispatch_due_at' => new \Zend_Db_Expr(sprintf('NOW() + INTERVAL %d SECOND', max(0, $seconds)))],
+            [
+                'entity_id = ?' => $entityId,
+                'state = ?' => self::STATE_QUOTED,
+                'dispatch_due_at IS NOT NULL',
+            ]
+        );
+    }
+
+    /**
      * Automatic booking is no longer due (the order cannot be shipped any
      * more, or the setting was switched off).
      *
