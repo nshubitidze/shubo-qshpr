@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!--
+        One row per Quickshipper delivery: written when an order is placed with
+        a Quickshipper courier (what the customer chose and paid, and where the
+        parcel goes), completed when the courier is booked. A partial shipment
+        books its own courier and gets its own row; so does a booking that
+        replaces an abandoned one (booked, never shipped). No foreign keys: a row is
+        the merchant's record of what was booked and paid and must outlive a
+        deleted order or shipment.
+    -->
+    <table name="shubo_qshpr_delivery" resource="default" engine="innodb" comment="Quickshipper Deliveries">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true"
+                comment="Entity ID"/>
+        <column xsi:type="int" name="order_id" unsigned="true" nullable="false"
+                comment="Magento order entity ID"/>
+        <column xsi:type="varchar" name="increment_id" nullable="false" length="32"
+                comment="Magento order increment ID (sent to Quickshipper as integrationOrderId)"/>
+        <column xsi:type="smallint" name="store_id" unsigned="true" nullable="false" default="0"
+                comment="Store scope (resolves the Quickshipper login)"/>
+        <column xsi:type="int" name="shipment_id" unsigned="true" nullable="true"
+                comment="Magento shipment entity ID, once the shipment is saved"/>
+        <column xsi:type="int" name="provider_id" unsigned="true" nullable="false"
+                comment="Quickshipper courier (provider) ID"/>
+        <column xsi:type="varchar" name="price_key" nullable="false" length="64"
+                comment="Chosen Quickshipper price ID as in the shipping method code (lower-case, alphanumeric)"/>
+        <column xsi:type="varchar" name="provider_name" nullable="true" length="64"
+                comment="Courier name as Quickshipper reported it at booking"/>
+        <column xsi:type="decimal" name="dropoff_latitude" scale="7" precision="10" nullable="true"
+                comment="Drop-off latitude the customer was quoted for"/>
+        <column xsi:type="decimal" name="dropoff_longitude" scale="7" precision="10" nullable="true"
+                comment="Drop-off longitude the customer was quoted for"/>
+        <column xsi:type="int" name="paid_amount" unsigned="true" nullable="false" default="0"
+                comment="Shipping the customer paid for this delivery, in tetri (0 for an extra delivery)"/>
+        <column xsi:type="int" name="charged_amount" unsigned="true" nullable="true"
+                comment="Courier price Quickshipper charged at booking, in tetri"/>
+        <column xsi:type="int" name="service_fee" unsigned="true" nullable="true"
+                comment="Quickshipper platform fee at booking, in tetri"/>
+        <column xsi:type="int" name="qshpr_order_id" unsigned="true" nullable="true"
+                comment="Quickshipper order ID"/>
+        <column xsi:type="varchar" name="qshpr_order_no" nullable="true" length="32"
+                comment="Quickshipper order number shown to people (e.g. SQ42609), the shipment tracking number"/>
+        <column xsi:type="varchar" name="tracking_url" nullable="true" length="255"
+                comment="Quickshipper tracking page"/>
+        <column xsi:type="varchar" name="state" nullable="false" length="16" default="quoted"
+                comment="Delivery state: quoted, drafted, dispatched, abandoned, delivered, cancelled or failed"/>
+        <column xsi:type="varchar" name="qshpr_status" nullable="true" length="32"
+                comment="Quickshipper order status last read (e.g. OnTheWay)"/>
+        <column xsi:type="varchar" name="courier_name" nullable="true" length="128"
+                comment="Courier Quickshipper assigned, as reported"/>
+        <column xsi:type="timestamp" name="status_changed_at" on_update="false" nullable="true"
+                comment="When qshpr_status last changed"/>
+        <column xsi:type="timestamp" name="status_checked_at" on_update="false" nullable="true"
+                comment="When Quickshipper was last asked for the status"/>
+        <column xsi:type="timestamp" name="alerted_at" on_update="false" nullable="true"
+                comment="When the merchant was told this booking without a shipment needs them (told once)"/>
+        <column xsi:type="timestamp" name="dispatch_due_at" on_update="false" nullable="true"
+                comment="When automatic booking is due (order paid); null when not due"/>
+        <column xsi:type="smallint" name="dispatch_attempts" unsigned="true" nullable="false" default="0"
+                comment="Automatic booking attempts that failed"/>
+        <column xsi:type="varchar" name="last_error" nullable="true" length="255"
+                comment="Why the last automatic booking attempt failed"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP"
+                comment="Created at"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP"
+                comment="Last update"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="SHUBO_QSHPR_DELIVERY_QSHPR_ORDER_ID">
+            <column name="qshpr_order_id"/>
+        </constraint>
+        <index referenceId="SHUBO_QSHPR_DELIVERY_ORDER_ID" indexType="btree">
+            <column name="order_id"/>
+        </index>
+        <index referenceId="SHUBO_QSHPR_DELIVERY_QSHPR_ORDER_NO" indexType="btree">
+            <column name="qshpr_order_no"/>
+        </index>
+        <index referenceId="SHUBO_QSHPR_DELIVERY_STATE_DISPATCH_DUE_AT" indexType="btree">
+            <column name="state"/>
+            <column name="dispatch_due_at"/>
+        </index>
+        <index referenceId="SHUBO_QSHPR_DELIVERY_STATE_STATUS_CHECKED_AT" indexType="btree">
+            <column name="state"/>
+            <column name="status_checked_at"/>
+        </index>
+        <index referenceId="SHUBO_QSHPR_DELIVERY_SHIPMENT_ID_STATE" indexType="btree">
+            <column name="shipment_id"/>
+            <column name="state"/>
+        </index>
+    </table>
+</schema>

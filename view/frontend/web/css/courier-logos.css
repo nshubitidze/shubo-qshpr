@@ -1,0 +1,34 @@
+/*
+ * Quickshipper courier logo beside the delivery option at checkout. A fixed
+ * box, so the courier name does not move when the image arrives; a logo of
+ * another shape is fitted into the box, not stretched.
+ */
+.table-checkout-shipping-method .shubo-qshpr-logo {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    margin-right: 8px;
+    vertical-align: middle;
+    border-radius: 4px;
+}
+
+/*
+ * Luma aligns the row's cells to the top; the logo makes the method cell
+ * taller, so a row with a logo centres all its cells instead. The radio
+ * button and the method title would still sit on the text baseline, a few
+ * pixels high: the radio becomes a block, which the cell centres exactly,
+ * and the title is centred on the logo.
+ */
+.table-checkout-shipping-method tbody tr:has(.shubo-qshpr-logo) > td {
+    vertical-align: middle;
+}
+
+.table-checkout-shipping-method tbody tr:has(.shubo-qshpr-logo) input[type='radio'] {
+    display: block;
+    margin: 0;
+}
+
+.table-checkout-shipping-method tbody tr:has(.shubo-qshpr-logo) .shubo-qshpr-logo + span {
+    vertical-align: middle;
+}

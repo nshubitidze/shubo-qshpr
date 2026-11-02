@@ -1,0 +1,107 @@
+/*
+ * Quickshipper balance in the admin header, built like the admin user menu
+ * beside it (same markup, box, triangle and menu), with Quickshipper's round
+ * mark in place of the user icon.
+ */
+.page-header-actions .shubo-qshpr-balance {
+    float: right;
+    line-height: 1.36;
+    margin-left: 0.3rem;
+    z-index: 489;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown {
+    height: 3.3rem;
+    padding: 0.7rem 2.8rem 0.4rem 4rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1.1rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    margin-top: -1.1rem;
+    background: url('../images/quickshipper-mark.svg') center / contain no-repeat;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown:after {
+    border-color: #41362f transparent transparent transparent;
+    border-style: solid;
+    border-width: 0.5rem 0.4rem 0 0.4rem;
+    content: '';
+    height: 0;
+    margin-top: -0.2rem;
+    position: absolute;
+    right: 1.3rem;
+    top: 50%;
+    transition: all 0.2s linear;
+    width: 0;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown:hover:after {
+    border-color: #060504 transparent transparent transparent;
+}
+
+.shubo-qshpr-balance._active .admin__action-dropdown,
+.shubo-qshpr-balance.active .admin__action-dropdown {
+    border-color: #007bdb;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+}
+
+.shubo-qshpr-balance .admin__action-dropdown._active:after,
+.shubo-qshpr-balance .admin__action-dropdown.active:after {
+    transform: rotate(180deg);
+}
+
+.shubo-qshpr-balance .admin__action-dropdown-menu {
+    min-width: 22rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown-menu > li > a {
+    padding-left: 0.5em;
+    padding-right: 1.8rem;
+    transition: background-color 0.1s linear;
+    white-space: nowrap;
+}
+
+.shubo-qshpr-balance .admin__action-dropdown-menu > li > a:hover {
+    background-color: #e0f6fe;
+    color: #41362f;
+}
+
+.shubo-qshpr-balance .shubo-qshpr-balance-summary {
+    padding: 0.6rem 0.5em 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+.shubo-qshpr-balance .shubo-qshpr-balance-title,
+.shubo-qshpr-balance .shubo-qshpr-balance-account {
+    display: block;
+    color: #777;
+    font-size: 1.2rem;
+}
+
+.shubo-qshpr-balance .shubo-qshpr-balance-amount {
+    display: block;
+    margin: 0.2rem 0;
+    color: #41362f;
+    font-size: 2rem;
+}
+
+/* On narrower screens the amount would push the search to a second line: the mark only, the amount in the menu. */
+@media (max-width: 1179px) {
+    .shubo-qshpr-balance .admin__action-dropdown {
+        padding-left: 3.5rem;
+    }
+
+    .shubo-qshpr-balance .admin__action-dropdown .admin__action-dropdown-text {
+        display: none;
+    }
+}

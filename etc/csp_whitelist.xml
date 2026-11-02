@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--
+  Courier logos at checkout are loaded from Quickshipper's file servers
+  (sandbox: test-static.quickshipper.app). Checkout enforces CSP, so the
+  image hosts must be allowed.
+-->
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <policy id="img-src">
+            <values>
+                <value id="shubo_qshpr_quickshipper_app" type="host">*.quickshipper.app</value>
+                <value id="shubo_qshpr_quickshipper_ge" type="host">*.quickshipper.ge</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>

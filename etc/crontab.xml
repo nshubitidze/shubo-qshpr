@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <!-- Cancels or reports Quickshipper bookings whose shipment was never
+             saved (each untouched for 15 minutes first). -->
+        <job name="shubo_qshpr_clean_up_deliveries" instance="Shubo\Qshpr\Cron\CleanUpDeliveries" method="execute">
+            <schedule>*/10 * * * *</schedule>
+        </job>
+        <!-- Asks Quickshipper about shipped deliveries still under way, in case a status webhook was lost. -->
+        <job name="shubo_qshpr_status_sync" instance="Shubo\Qshpr\Cron\StatusSync" method="execute">
+            <schedule>*/15 * * * *</schedule>
+        </job>
+        <!-- Books and ships paid orders when "Book Courier Automatically" is on. -->
+        <job name="shubo_qshpr_auto_dispatch" instance="Shubo\Qshpr\Cron\AutoDispatch" method="execute">
+            <schedule>* * * * *</schedule>
+        </job>
+    </group>
+</config>

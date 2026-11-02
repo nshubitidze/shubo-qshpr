@@ -1,0 +1,45 @@
+{
+    "shubo_qshpr_delivery": {
+        "column": {
+            "entity_id": true,
+            "order_id": true,
+            "increment_id": true,
+            "store_id": true,
+            "shipment_id": true,
+            "provider_id": true,
+            "price_key": true,
+            "provider_name": true,
+            "dropoff_latitude": true,
+            "dropoff_longitude": true,
+            "paid_amount": true,
+            "charged_amount": true,
+            "service_fee": true,
+            "qshpr_order_id": true,
+            "qshpr_order_no": true,
+            "tracking_url": true,
+            "state": true,
+            "qshpr_status": true,
+            "courier_name": true,
+            "status_changed_at": true,
+            "status_checked_at": true,
+            "alerted_at": true,
+            "dispatch_due_at": true,
+            "dispatch_attempts": true,
+            "last_error": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "SHUBO_QSHPR_DELIVERY_ORDER_ID": true,
+            "SHUBO_QSHPR_DELIVERY_QSHPR_ORDER_NO": true,
+            "SHUBO_QSHPR_DELIVERY_STATE_CREATED_AT": true,
+            "SHUBO_QSHPR_DELIVERY_SHIPMENT_ID_STATE": true,
+            "SHUBO_QSHPR_DELIVERY_STATE_DISPATCH_DUE_AT": true,
+            "SHUBO_QSHPR_DELIVERY_STATE_STATUS_CHECKED_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "SHUBO_QSHPR_DELIVERY_QSHPR_ORDER_ID": true
+        }
+    }
+}
