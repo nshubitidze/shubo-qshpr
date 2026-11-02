@@ -41,6 +41,7 @@ use Magento\Sales\Model\OrderRepository;
 use Magento\Sales\Model\Order\ShipmentFactory;
 use Magento\Shipping\Model\CarrierFactory;
 use Shubo\Qshpr\Cron\AutoDispatch;
+use Shubo\Qshpr\Model\Schedule\OpeningHours;
 use Shubo\Qshpr\Cron\CleanUpDeliveries;
 use Shubo\Qshpr\Exception\DispatchException;
 use Shubo\Qshpr\Exception\QshprApiException;
@@ -969,16 +970,33 @@ if ($orderId === 0) {
             'shipmentSender' => $sender,
             'notifier' => $notices,
         ]);
+        // Opening hours as a stub: open (null) or opening in $inSeconds, so the
+        // runs do not depend on the store's own opening hours or the clock.
+        $hours = static fn (?int $inSeconds): OpeningHours => new class ($inSeconds) extends OpeningHours {
+            public function __construct(private readonly ?int $inSeconds)
+            {
+            }
+
+            public function nextOpening(?int $storeId = null, ?\DateTimeImmutable $now = null): ?\DateTimeImmutable
+            {
+                return $this->inSeconds === null ? null
+                    : (new \DateTimeImmutable())->modify(sprintf('+%d seconds', $this->inSeconds));
+            }
+        };
         $autoRun = static function (array $queue, array $shipperArgs = [], array $cronArgs = []) use (
             $om,
             $client,
             $notices,
             $autoShipper,
+            $hours,
         ): void {
             $client->queue = $queue + ['fees' => [], 'create' => [], 'get' => [], 'confirm' => [], 'cancel' => []];
             $client->calls = [];
             $notices->critical = [];
-            $om->create(AutoDispatch::class, $cronArgs + ['autoShipper' => $autoShipper($shipperArgs)])->execute();
+            $om->create(AutoDispatch::class, $cronArgs + [
+                'autoShipper' => $autoShipper($shipperArgs),
+                'openingHours' => $hours(null),
+            ])->execute();
         };
         $makeDue = static function (int $attempts = 0) use ($connection, $table, $orderId): void {
             $connection->update($table, ['dispatch_due_at' => new \Zend_Db_Expr('NOW() - INTERVAL 1 MINUTE'),
@@ -1081,6 +1099,24 @@ if ($orderId === 0) {
             $client->calls === [] && $rows()[0]['dispatch_due_at'] === null);
         $connection->update($orderTable, ['base_total_paid' => new \Zend_Db_Expr('base_grand_total')],
             ['entity_id = ?' => $orderId]);
+
+        // Shop closed and keeping opening hours: "as soon as possible" waits for
+        // opening; a delivery with a chosen time is booked at once.
+        $resetRows();
+        $makeDue();
+        $autoRun([], cronArgs: ['openingHours' => $hours(36000)]);
+        $row = $rows()[0];
+        $minutesAhead = (int)$connection->fetchOne('SELECT TIMESTAMPDIFF(MINUTE, NOW(), ?)', [$row['dispatch_due_at']]);
+        check('auto, shop closed: as soon as possible waits until opening, nothing booked', $client->calls === []
+            && $minutesAhead >= 599 && $minutesAhead <= 600 && (int)$row['dispatch_attempts'] === 0, "in $minutesAhead min");
+        $autoRun([]);
+        check('auto, shop closed: not tried again before opening', $client->calls === []);
+        $makeDue();
+        $connection->update($table, ['scheduled_time' => gmdate('Y-m-d\\TH:i:s\\Z', time() + 86400)],
+            ['order_id = ?' => $orderId, 'state = ?' => 'quoted']);
+        $autoRun(['fees' => [$timeout()]], cronArgs: ['openingHours' => $hours(36000)]);
+        check('auto, shop closed: a delivery with a chosen time is booked at once', $operations() === 'fees', $operations());
+        $connection->update($table, ['scheduled_time' => null], ['order_id = ?' => $orderId]);
 
         // An unexpected error (here: the order cannot be loaded): stopped and reported, not retried every minute.
         $missingOrders = new class () extends OrderRepository {

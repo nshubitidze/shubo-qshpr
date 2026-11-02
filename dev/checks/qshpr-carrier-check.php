@@ -14,6 +14,9 @@
 //  2e. delivery times: slots from the settings in store time, couriers whose
 //      hasScheduledDelivery is true
 //     only, the shipping step keeps only an offered slot (Plugin\SaveDeliveryTime)
+//  2f. opening hours: open / next opening in store time, settings, rate titles
+//     while closed, "as soon as possible" not offered or accepted while closed,
+//     slots within the opening hours
 //  3. LIVE sandbox: a Tbilisi address gets courier rates, Batumi (intercity) none
 //  4. log assertions on var/log/shubo_qshpr.log (this run's lines only)
 //
@@ -50,6 +53,8 @@ use Shubo\Qshpr\Plugin\QuoteItemCarDeliveryAttribute;
 use Shubo\Qshpr\Model\Rates\CarDeliveryRule;
 use Shubo\Qshpr\Model\Schedule\DeliverySlots;
 use Shubo\Qshpr\Model\Schedule\ScheduledCouriers;
+use Shubo\Qshpr\Model\Schedule\OpeningHours;
+use Shubo\Qshpr\Model\Ui\DeliveryTimeConfigProvider;
 use Shubo\Qshpr\Plugin\ShippingMethodDeliveryTime;
 use Shubo\Qshpr\Plugin\SaveDeliveryTime;
 use Shubo\Qshpr\Model\Rates\RateQuoter;
@@ -149,9 +154,13 @@ function carrier(
     ?CourierLogos $logos = null,
     ?CashOnDelivery $cod = null,
     ?ScheduledCouriers $scheduled = null,
+    ?OpeningHours $hours = null,
+    ?DeliverySlots $slots = null,
 ): Qshpr
 {
-    $scope = overrideScope($overrides + [P . 'active' => '1'], $om->get(ScopeConfigInterface::class));
+    $scope = overrideScope($overrides + [P . 'active' => '1', P . 'opening_hours/kept' => '0'],
+        $om->get(ScopeConfigInterface::class));
+    $config = $om->create(Config::class, ['scopeConfig' => $scope]);
 
     return $om->create(Qshpr::class, [
         'rateQuoter' => $quoter,
@@ -160,6 +169,8 @@ function carrier(
         'courierLogos' => $logos ?? $om->create(CourierLogos::class, ['cache' => memoryCache()]),
         'cashOnDelivery' => $cod ?? $om->create(CashOnDelivery::class, ['cache' => memoryCache()]),
         'scheduledCouriers' => $scheduled ?? $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]),
+        'openingHours' => $hours ?? $om->create(OpeningHours::class, ['config' => $config]),
+        'deliverySlots' => $slots ?? $om->create(DeliverySlots::class, ['config' => $config]),
         'scopeConfig' => $scope,
     ]);
 }
@@ -503,8 +514,8 @@ check('time: defaults → today + 2 days, 10:00–20:00 in 2-hour slots', count(
 $late = new \DateTimeImmutable('2026-10-03T13:30:00Z');    // 17:30 in Tbilisi
 check('time: 2 hours\' notice → no slot today after 17:30', count($slotsWith([])->getSlots(1, $late)) === 10
     && $slotsWith([])->getSlots(1, $late)[0]['label'] === 'Sun, 4 Oct, 10:00–12:00');
-check('time: settings followed (1 day, 9–13, 1-hour slots)', array_column($slotsWith([P . 'schedule/days' => '1',
-    P . 'schedule/first_hour' => '9', P . 'schedule/last_hour' => '13', P . 'schedule/slot_hours' => '1'])
+check('time: settings followed (1 day, open 9–13, 1-hour slots)', array_column($slotsWith([P . 'schedule/days' => '1',
+    P . 'opening_hours/opens_at' => '9', P . 'opening_hours/closes_at' => '13', P . 'schedule/slot_hours' => '1'])
     ->getSlots(1, $early), 'label')[0] === 'Sat, 3 Oct, 09:00–10:00');
 check('time: switched off → no slots', $slotsWith([P . 'schedule/enabled' => '0'])->getSlots(1, $early) === []);
 check('time: follows the courier\'s flag, not the price id', $slotsWith([])->acceptsTime('shuboqshpr_2_asap')
@@ -522,7 +533,18 @@ check('time: any chosen time described in store time', $slotsWith([])->describe(
     === 'Sun, 4 Oct, 12:00–14:00');
 
 $offered = $slotsWith([])->getSlots(1)[0]['value'] ?? '';
-$saveWith = static function (string $method, string $time) use ($om, $slotsWith): array {
+// Opening hours as a stub: open (null) or closed until $opening.
+$hoursStub = static fn (?\DateTimeImmutable $opening): OpeningHours => new class ($opening) extends OpeningHours {
+    public function __construct(private readonly ?\DateTimeImmutable $opening)
+    {
+    }
+
+    public function nextOpening(?int $storeId = null, ?\DateTimeImmutable $now = null): ?\DateTimeImmutable
+    {
+        return $this->opening;
+    }
+};
+$saveWith = static function (string $method, string $time, ?OpeningHours $hours = null) use ($om, $slotsWith, $hoursStub): array {
     $info = $om->create(\Magento\Checkout\Api\Data\ShippingInformationInterface::class);
     $address = $om->create(\Magento\Quote\Model\Quote\Address::class);
     [$carrier, $code] = explode('_', $method, 2);
@@ -569,7 +591,11 @@ $saveWith = static function (string $method, string $time) use ($om, $slotsWith)
         {
         }
     };
-    $plugin = $om->create(SaveDeliveryTime::class, ['deliverySlots' => $slotsWith([]), 'cartRepository' => $carts]);
+    $plugin = $om->create(SaveDeliveryTime::class, [
+        'deliverySlots' => $slotsWith([]),
+        'cartRepository' => $carts,
+        'openingHours' => $hours ?? $hoursStub(null),
+    ]);
     try {
         $plugin->beforeSaveAddressInformation($om->get(\Magento\Checkout\Model\ShippingInformationManagement::class), 1, $info);
         $error = '';
@@ -586,6 +612,64 @@ check('save: a time not offered is refused', str_contains($saveWith('shuboqshpr_
 check('save: other deliveries clear the time', $saveWith('shuboqshpr_12_asap', $offered) === [null, '']
     && $saveWith('flatrate_flatrate', $offered) === [null, '']);
 check('save: "as soon as possible" clears the time', $saveWith('shuboqshpr_2_asap', '') === [null, '']);
+
+// --- 2f. Opening hours ---
+$hoursWith = static function (array $o) use ($om): OpeningHours {
+    $scope = overrideScope($o + [P . 'opening_hours/kept' => '1', 'general/locale/timezone' => 'Asia/Tbilisi'],
+        $om->get(ScopeConfigInterface::class));
+
+    return $om->create(OpeningHours::class, [
+        'config' => $om->create(Config::class, ['scopeConfig' => $scope]),
+        'timezone' => $om->create(\Magento\Framework\Stdlib\DateTime\Timezone::class, ['scopeConfig' => $scope]),
+    ]);
+};
+$tbilisiTime = static fn (string $time): \DateTimeImmutable => new \DateTimeImmutable($time, new \DateTimeZone('Asia/Tbilisi'));
+$opensAt = static fn (OpeningHours $h, string $now): string => $h->nextOpening(1, $tbilisiTime($now))?->format('D Y-m-d H:i') ?? 'open';
+check('hours: not kept → never closed', $opensAt($hoursWith([P . 'opening_hours/kept' => '0']), '2026-11-03 03:00') === 'open');
+check('hours: defaults 10–20 → open at 10:00 and 19:59', $opensAt($hoursWith([]), '2026-11-03 10:00') === 'open'
+    && $opensAt($hoursWith([]), '2026-11-03 19:59') === 'open');
+check('hours: 03:00 → opens today 10:00', $opensAt($hoursWith([]), '2026-11-03 03:00') === 'Tue 2026-11-03 10:00');
+check('hours: 20:00 → closed, opens tomorrow 10:00', $opensAt($hoursWith([]), '2026-11-03 20:00') === 'Wed 2026-11-04 10:00');
+check('hours: in store time, whatever the server zone', $hoursWith([])->nextOpening(1, new \DateTimeImmutable('2026-11-03T17:00:00Z'))
+    ?->format('Y-m-d H:i') === '2026-11-04 10:00');
+check('hours: settings followed (8–24)', $opensAt($hoursWith([P . 'opening_hours/opens_at' => '8',
+    P . 'opening_hours/closes_at' => '24']), '2026-11-03 23:30') === 'open'
+    && $opensAt($hoursWith([P . 'opening_hours/opens_at' => '8']), '2026-11-03 07:00') === 'Tue 2026-11-03 08:00');
+check('hours: closing before opening → treated as not kept', $opensAt($hoursWith([P . 'opening_hours/opens_at' => '20',
+    P . 'opening_hours/closes_at' => '10']), '2026-11-03 03:00') === 'open');
+check('hours: described for the customer', $hoursWith([])->describe($tbilisiTime('2026-11-04 10:00')) === 'Wed 10:00');
+check('config.xml: opening hours not kept by default, 10–20', (string)$defaults->opening_hours->kept === '0'
+    && (string)$defaults->opening_hours->opens_at === '10' && (string)$defaults->opening_hours->closes_at === '20');
+
+$closed = $hoursStub($tbilisiTime('2026-11-04 10:00'));
+$titles = static fn (array $rates): array => array_column($rates, 'title', 'code');
+$closedTitles = $titles(rates(carrier($om, quoter($om, stubGeocoder($tbilisi), stubClient([$withSchedule])), [],
+    scheduled: $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]), hours: $closed,
+    slots: $slotsWith([P . 'schedule/enabled' => '0']))->collectRates(rateRequest($om))));
+check('hours, closed: every courier says when it is booked', ($closedTitles['2_asap'] ?? '')
+    === 'Wolt – 45-60 min delivery⚡ (after we open, Wed 10:00)'
+    && ($closedTitles['25_85'] ?? '') === 'OnWay – 4 days delivery (after we open, Wed 10:00)', json_encode($closedTitles));
+$closedTitles = $titles(rates(carrier($om, quoter($om, stubGeocoder($tbilisi), stubClient([$withSchedule])), [],
+    scheduled: $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]), hours: $closed,
+    slots: $slotsWith([]))->collectRates(rateRequest($om))));
+check('hours, closed with delivery times: couriers that take a time keep their title (the customer picks the time)',
+    ($closedTitles['2_asap'] ?? '') === 'Wolt – 45-60 min delivery⚡'
+    && ($closedTitles['12_asap'] ?? '') === 'Glovo (after we open, Wed 10:00)', json_encode($closedTitles));
+$openTitles = $titles(rates(carrier($om, quoter($om, stubGeocoder($tbilisi), stubClient([$withSchedule])), [],
+    hours: $hoursStub(null))->collectRates(rateRequest($om))));
+check('hours, open: titles unchanged', ($openTitles['2_asap'] ?? '') === 'Wolt – 45-60 min delivery⚡', json_encode($openTitles));
+
+$checkoutConfig = static fn (?OpeningHours $hours): array => $om->create(DeliveryTimeConfigProvider::class, [
+    'deliverySlots' => $slotsWith([]),
+    'openingHours' => $hours,
+])->getConfig()['shuboQshprDeliveryTime'];
+check('hours: checkout offers "as soon as possible" while open, not while closed',
+    $checkoutConfig($hoursStub(null))['asap'] === true && $checkoutConfig($closed)['asap'] === false
+    && $checkoutConfig($closed)['slots'] !== []);
+check('save, closed: no time for a courier that takes one → refused',
+    str_contains($saveWith('shuboqshpr_2_asap', '', $closed)[1], 'We are closed now'));
+check('save, closed: a chosen slot is kept', $saveWith('shuboqshpr_2_asap', $offered, $closed) === [$offered, '']);
+check('save, closed: a courier that takes no time needs none', $saveWith('shuboqshpr_12_asap', '', $closed) === [null, '']);
 
 // --- 3. LIVE sandbox ---
 [$liveUser, $livePassword] = sandboxCredentials();

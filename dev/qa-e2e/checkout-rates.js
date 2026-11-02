@@ -21,6 +21,9 @@
 // whose hasScheduledDelivery is true, e.g. COURIER=2): picks the second offered delivery time and checks
 // it is shown; prints it with the order. SCHEDULE=hidden checks that the
 // chosen courier (one whose hasScheduledDelivery is false) gets no list.
+// SCHEDULE=closed (opening hours kept and the shop closed now, a courier that
+// takes a time chosen): no "As soon as possible", the first slot is picked,
+// other couriers' titles say "(after we open, …)".
 // COURIER=<Quickshipper courier id> (e.g. 2 = Wolt) orders with that courier,
 // to the second Tbilisi address (a shorter trip), instead of the cheapest.
 
@@ -157,6 +160,21 @@ async function quickshipperRates(page) {
                 await select.selectOption({ index: 2 });
                 deliveryTime = choices[2];
             }
+        } else if (process.env.SCHEDULE === 'closed') {
+            // The shop keeps opening hours and is closed now.
+            const select = page.locator('select[name=shubo_qshpr_delivery_time]');
+            const shown = await select.isVisible().catch(() => false);
+            const choices = shown ? await select.locator('option').allInnerTexts() : [];
+            const picked = shown ? await select.locator('option:checked').innerText().catch(() => '') : '';
+            check('closed: delivery time list without "As soon as possible", first slot picked', shown
+                && choices.length > 0 && choices[0] !== 'As soon as possible' && choices[0] !== 'რაც შეიძლება მალე'
+                && picked === choices[0], choices.slice(0, 3).join(' | ') + ` / picked: ${picked}`);
+            const titles = await quickshipperRates(page);
+            check('closed: couriers without a delivery time say when they are booked',
+                titles.some((t) => /\(after we open|\(გახსნის შემდეგ/.test(t))
+                && titles.filter((t) => t.startsWith(chosen)).every((t) => !/\(after we open|\(გახსნის შემდეგ/.test(t)),
+                titles.join(' | '));
+            deliveryTime = picked;
         } else if (process.env.SCHEDULE === 'hidden') {
             const shown = await page.locator('select[name=shubo_qshpr_delivery_time]').isVisible().catch(() => false);
             check(`courier that takes no time (${chosen}) → no delivery time list`, !shown);

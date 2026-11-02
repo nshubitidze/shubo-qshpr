@@ -55,8 +55,8 @@ class DeliverySlots
         $zone = new \DateTimeZone($this->timezone->getConfigTimezone(null, $storeId));
         $now = ($now ?? new \DateTimeImmutable())->setTimezone($zone);
         $earliest = $now->modify(sprintf('+%d hours', $this->config->getScheduleNoticeHours($storeId)));
-        $first = $this->config->getScheduleFirstHour($storeId);
-        $last = $this->config->getScheduleLastHour($storeId);
+        $first = $this->config->getOpensAt($storeId);
+        $last = $this->config->getClosesAt($storeId);
         $length = $this->config->getScheduleSlotHours($storeId);
         $days = $this->config->getScheduleDays($storeId);
         $slots = [];
