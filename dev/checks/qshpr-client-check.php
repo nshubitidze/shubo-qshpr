@@ -178,7 +178,9 @@ expectApiException(fn () => $client->getAccount(), 'password is not configured',
     'missing password -> fails before any HTTP call');
 
 $cache = memoryCache();
-[$client, $factory] = stubClient($om, stubCredentials($encryptor), [tokenBody('STUB-TOKEN-1'), $okAccount], $cache);
+// A timeout of its own: the check must not depend on the store's saved setting.
+[$client, $factory] = stubClient($om, [P . 'api_timeout' => '7'] + stubCredentials($encryptor),
+    [tokenBody('STUB-TOKEN-1'), $okAccount], $cache);
 $account = $client->getAccount();
 check('happy path: account returned', ($account['shopName'] ?? null) === 'Stub Shop');
 [$login, $api] = $factory->made + [null, null];
@@ -198,7 +200,7 @@ check('login: password grant, DeliveryApi scope, credentials',
 check('api: GET sandbox /v1/Account with the bearer token',
     $api->method === 'GET' && $api->uri === SANDBOX_API . '/v1/Account'
         && ($api->sentHeaders()['Authorization'] ?? '') === 'Bearer STUB-TOKEN-1');
-check('api: timeout from config (10 s)', $api->sentTimeout() === 10 && $login->sentTimeout() === 10);
+check('api: timeout from config (7 s)', $api->sentTimeout() === 7 && $login->sentTimeout() === 7);
 $key = array_key_first($cache->data);
 check('token cache: one entry, value encrypted', count($cache->data) === 1
     && !str_contains((string)$cache->data[$key], 'STUB-TOKEN-1')
