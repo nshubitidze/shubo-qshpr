@@ -469,6 +469,34 @@ Same trip (Freedom Square → Iakob Nikoladze St 7, Tbilisi), `CartWeight`
 - The flag is sent as the text `true` (the module's query is built with
   `http_build_query`, which would turn a PHP `true` into `1`).
 
+## 2026-10-03 — scheduled prices again (price requests only, nothing created)
+
+Freedom Square → Iakob Nikoladze St 7, Tbilisi, 1 kg, with
+`ScheduleDelivery.ProviderId` + `ScheduleDelivery.ScheduledDate` (UTC,
+`…Z`):
+
+- Wolt (2) at `2026-10-03T08:00:00Z` → one price `id "custom"`, 9.31 (same
+  as its instant price), `deliverySpeedName` "03 Oct - 12:00 🗓️" (= 08:00Z
+  shown in Tbilisi time), `deliveryTime` `"2026-10-03T08:00:00"` (no zone).
+- Glovo (12) same time → `id "CustomDate"`, 8.41 (= instant),
+  `deliveryTime` `"2026-10-03T08:00:00Z"`.
+- Wolt two days ahead (`2026-10-05T14:00:00Z`) → "05 Oct - 18:00", 9.31.
+- **OnWay (25) with a time → no fees at all** (on 2026-10-01 its normal
+  price came back instead). Times are only offered for instant couriers
+  in module branch `feature/scheduled-delivery`.
+
+## 2026-10-03 — a Draft's delivery time does not survive the confirm (order 42619 / TS42619)
+
+Wolt, booked with `scheduledTime "2026-10-04T08:00:00Z"` (quote with
+`ScheduleDelivery.*` → price `custom` 4.90), portal on "assign the courier
+after confirmation" → **Draft**; `GET /v1/Order` showed `deliveryType
+"Scheduled"`, `scheduledTime "2026-10-04T08:00:00Z"`. After `POST
+/v1/Order/confirm`: `scheduledTime "2026-10-03T02:43:29Z"` (confirm + ~55
+min), `approximateDeliveryMin 90` — the courier would come now. Cancelled at
+once, full price back. (Same order also carried `carDelivery` and
+`parcelDimensions`: accepted, not echoed.) Unknown: whether the time is kept
+when the portal assigns automatically (no Draft) — ask Quickshipper.
+
 ## 2026-11-01 — the service fee is inside `amount` (price request only)
 
 The sandbox account still had fee-free requests left, so `/fees` answered
@@ -525,3 +553,31 @@ Freedom Square → Iakob Nikoladze St 7, Tbilisi (fee still waived):
   to the courier terms (https://qshpr.com/ka/post/54) caps a parcel's
   contents at 1,000 ₾ incl. VAT and lets Wolt refuse a dearer one
   (`business.md`). Whether production filters by `CartAmount` is an open question.
+
+## 2026-11-01 — scheduled prices again (price requests only, nothing created)
+
+Freedom Square → Nikoladze St, Tbilisi, `CartWeight` 2, time
+`2026-11-02T06:00:00Z` (10:00 Tbilisi):
+
+- Wolt with `ScheduleDelivery.*` → one price `id "custom"`, 4.90 (= its
+  instant price), `deliverySpeedName` "02 Nov - 10:00 🗓️", `deliveryTime`
+  `"2026-11-02T06:00:00"` (no zone) — same shape as 2026-10-03.
+- **OnWay with a time → its normal price** (`85`, 6.00, `deliveryTime`
+  null), as on 2026-10-01; on 2026-10-03 it gave no fees at all. Either way
+  OnWay does not take a time.
+- Glovo not offered at all on this trip (with or without a time) — the
+  known "Glovo disappears when `CartWeight` is sent".
+- One `/fees` call answered **HTTP 500 with an empty body** (150 ms); the
+  same query a minute later worked. The module treats it as "no rates" at
+  checkout and as a retryable price-check failure at booking.
+
+
+## 2026-11-02 — `hasScheduledDelivery` per courier (price request only, nothing created)
+
+Freedom Square → Nikoladze St, Tbilisi, with and without `CartWeight` 2:
+Wolt (2) `hasScheduledDelivery` **true**, price `asap`; OnWay (25)
+**false**, price `85` "4 days delivery"; Glovo not quoted. Matches what
+Wolt and OnWay do with a time (Wolt quotes it, OnWay ignores it). Glovo's
+false of 2026-10-01 against its scheduled price is not re-checked; the
+module now follows the flag (2026-11-02), so it must be
+confirmed in production.

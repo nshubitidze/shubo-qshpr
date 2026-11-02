@@ -1,0 +1,9 @@
+/*
+ * The "Delivery time" list under the delivery options: as wide as Luma's
+ * address fields instead of the whole step, and clear of the Next button
+ * that follows it.
+ */
+.checkout-shipping-method .shubo-qshpr-delivery-time {
+    max-width: 500px;
+    margin-bottom: 20px;
+}

@@ -492,6 +492,27 @@ if ($orderId === 0) {
         check('car: booking asked carDelivery: true', ($client->calls[1][1]['carDelivery'] ?? null) === true);
         $carRule->force = null;
 
+        // A delivery time the customer chose at checkout.
+        $stop = static fn (): QshprApiException => new QshprApiException(__('Quickshipper error 400 for POST /v1/Order: test stop'), apiErrorCode: 400);
+        $future = gmdate('Y-m-d\\TH:i:s\\Z', time() + 86400);
+        $connection->update($table, ['scheduled_time' => $future], ['entity_id = ?' => $quotedId]);
+        $customPrice = ['id' => 'custom', 'amount' => 6.6, 'currencyName' => 'GEL', 'deliverySpeedId' => null];
+        $ship(['fees' => [$fees([$customPrice])], 'create' => [$stop()]]);
+        check('time: price asked for that courier at the chosen time',
+            ($client->calls[0][1]['ScheduleDelivery.ProviderId'] ?? null) === 25
+                && ($client->calls[0][1]['ScheduleDelivery.ScheduledDate'] ?? null) === $future, json_encode($client->calls[0][1] ?? []));
+        check('time: the scheduled price is booked with scheduledTime',
+            ($client->calls[1][1]['scheduledTime'] ?? null) === $future
+                && ($client->calls[1][1]['provider']['providerFeeId'] ?? null) === 'custom');
+        $connection->update($table, ['scheduled_time' => gmdate('Y-m-d\\TH:i:s\\Z', time() - 3600)], ['entity_id = ?' => $quotedId]);
+        [$latePlaced] = $ship(['fees' => [$fees([$onWay85])], 'create' => [$stop()]]);
+        check('time passed: booked as soon as possible', !array_key_exists('ScheduleDelivery.ProviderId', $client->calls[0][1])
+            && !array_key_exists('scheduledTime', $client->calls[1][1]));
+        check('time passed: the merchant is told, in store time', str_contains($comments($latePlaced), 'has passed')
+            && str_contains($comments($latePlaced), 'store time') && !str_contains($comments($latePlaced), 'UTC'),
+            $comments($latePlaced));
+        $connection->update($table, ['scheduled_time' => null], ['entity_id = ?' => $quotedId]);
+
         // Booked; Quickshipper charged more than the customer paid (OnWay bracket change 85 → 86).
         [$order, $shipment, $error] = $ship([
             'fees' => [$fees([['id' => '86', 'amount' => 8.6, 'currencyName' => 'GEL', 'deliverySpeedId' => 86]])],
@@ -593,6 +614,36 @@ if ($orderId === 0) {
         check('draft: usual success message', $messages->added === [
             ['success', 'Quickshipper booked OnWay for this shipment: order SQ777010.'],
         ], json_encode($messages->added));
+
+        // Draft booked for a delivery time: confirm drops the time (seen live) → the merchant is told.
+        $resetRows();
+        $chosenTime = gmdate('Y-m-d\\TH:i:s\\Z', time() + 86400);
+        $connection->update($table, ['scheduled_time' => $chosenTime], ['order_id = ?' => $orderId]);
+        $customPrice = ['id' => 'custom', 'amount' => 6.6, 'currencyName' => 'GEL', 'deliverySpeedId' => null];
+        $readBack = static fn (string $time): array => ['success' => true, 'order' => ['id' => 777040, 'status' => 'ReadyForPickup',
+            'orderNo' => 'SQ777040', 'scheduledTime' => $time]];
+        [$order, , $error] = $ship([
+            'fees' => [$fees([$customPrice])],
+            'create' => [$draft(777040)],
+            'get' => [$details(777040, 6.6), $readBack(gmdate('Y-m-d\\TH:i:s\\Z', time() + 3300))],
+            'confirm' => [$confirmed],
+        ]);
+        check('time + Draft: confirm dropped the time → order note for the merchant', $error === null
+            && $operations() === 'fees,create,get,confirm,get'
+            && str_contains($comments($order), 'dropped the delivery time')
+            && preg_match('/\(\w{3}, \d{1,2} \w{3}, \d\d:\d\d–\d\d:\d\d, store time\)/u', $comments($order)) === 1,
+            (string)$error?->getMessage() . ' ' . $operations());
+        $connection->delete($table, ['order_id = ?' => $orderId]);
+        $resetRows();
+        $connection->update($table, ['scheduled_time' => $chosenTime], ['order_id = ?' => $orderId]);
+        [$order, , $error] = $ship([
+            'fees' => [$fees([$customPrice])],
+            'create' => [$draft(777041)],
+            'get' => [$details(777041, 6.6), $readBack($chosenTime)],
+            'confirm' => [$confirmed],
+        ]);
+        check('time + Draft: time kept → no note', $error === null && !str_contains($comments($order), 'dropped the delivery time'));
+        $connection->update($table, ['scheduled_time' => null], ['order_id = ?' => $orderId]);
 
         // Confirm refused: the Draft is kept, and the retry confirms the same Draft.
         $resetRows();

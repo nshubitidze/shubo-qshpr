@@ -81,6 +81,7 @@ class DeliveryLog
      * @param float|null $latitude Drop-off point the customer was quoted for.
      * @param float|null $longitude
      * @param int $paidAmount Shipping the customer paid, in tetri.
+     * @param string|null $scheduledTime Delivery time the customer chose (UTC ISO 8601); null = as soon as possible.
      * @return int Row id.
      */
     public function recordQuote(
@@ -92,9 +93,11 @@ class DeliveryLog
         ?float $latitude,
         ?float $longitude,
         int $paidAmount,
+        ?string $scheduledTime = null,
     ): int {
         $connection = $this->resource->getConnection();
         $connection->insert($this->table(), [
+            'scheduled_time' => $scheduledTime,
             'order_id' => $orderId,
             'increment_id' => $incrementId,
             'store_id' => $storeId,

@@ -16,7 +16,7 @@ docker run --rm --network host --add-host "$HOST:127.0.0.1" \
   -v "$PWD:/work" -w /work \
   -e BASE_URL="$BASE_URL" -e PRODUCT_ID="${PRODUCT_ID:-1}" -e RATES_ONLY="${RATES_ONLY:-}" \
   -e COURIER="${COURIER:-}" -e ADMIN_PATH="${ADMIN_PATH:-}" -e ADMIN_USER="${ADMIN_USER:-}" \
-  -e ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" -e ORDER_NUMBER="${ORDER_NUMBER:-}" -e BUTTON="${BUTTON:-}" -e LOGOS="${LOGOS:-}" \
+  -e ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" -e ORDER_NUMBER="${ORDER_NUMBER:-}" -e BUTTON="${BUTTON:-}" -e LOGOS="${LOGOS:-}" -e SCHEDULE="${SCHEDULE:-}" \
   -e EXPECT_HIDDEN="${EXPECT_HIDDEN:-}" \
   -e COD="${COD:-}" \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \

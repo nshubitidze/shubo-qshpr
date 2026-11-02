@@ -11,6 +11,9 @@
 //  2d. car delivery: the rule (the merchant's Yes/No attribute, weight,
 //     default), the cart's items, the attribute loaded with cart items,
 //     the settings list, CarDelivery=true in the fees query
+//  2e. delivery times: slots from the settings in store time, couriers whose
+//      hasScheduledDelivery is true
+//     only, the shipping step keeps only an offered slot (Plugin\SaveDeliveryTime)
 //  3. LIVE sandbox: a Tbilisi address gets courier rates, Batumi (intercity) none
 //  4. log assertions on var/log/shubo_qshpr.log (this run's lines only)
 //
@@ -45,6 +48,10 @@ use Shubo\Qshpr\Observer\HideCashOnDelivery;
 use Shubo\Qshpr\Model\Config\Source\YesNoProductAttribute;
 use Shubo\Qshpr\Plugin\QuoteItemCarDeliveryAttribute;
 use Shubo\Qshpr\Model\Rates\CarDeliveryRule;
+use Shubo\Qshpr\Model\Schedule\DeliverySlots;
+use Shubo\Qshpr\Model\Schedule\ScheduledCouriers;
+use Shubo\Qshpr\Plugin\ShippingMethodDeliveryTime;
+use Shubo\Qshpr\Plugin\SaveDeliveryTime;
 use Shubo\Qshpr\Model\Rates\RateQuoter;
 use Shubo\Qshpr\Model\TokenCache;
 use Shubo\Qshpr\Model\WeightConverter;
@@ -135,7 +142,14 @@ function quoter($om, Geocoder $geocoder, QshprClient $client, array $overrides =
     ]);
 }
 
-function carrier($om, RateQuoter $quoter, array $overrides = [], ?CourierLogos $logos = null, ?CashOnDelivery $cod = null): Qshpr
+function carrier(
+    $om,
+    RateQuoter $quoter,
+    array $overrides = [],
+    ?CourierLogos $logos = null,
+    ?CashOnDelivery $cod = null,
+    ?ScheduledCouriers $scheduled = null,
+): Qshpr
 {
     $scope = overrideScope($overrides + [P . 'active' => '1'], $om->get(ScopeConfigInterface::class));
 
@@ -145,6 +159,7 @@ function carrier($om, RateQuoter $quoter, array $overrides = [], ?CourierLogos $
         // In-memory caches: the checks must not leave logos or courier answers in the store's cache.
         'courierLogos' => $logos ?? $om->create(CourierLogos::class, ['cache' => memoryCache()]),
         'cashOnDelivery' => $cod ?? $om->create(CashOnDelivery::class, ['cache' => memoryCache()]),
+        'scheduledCouriers' => $scheduled ?? $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]),
         'scopeConfig' => $scope,
     ]);
 }
@@ -451,6 +466,126 @@ check('car: fees query asks CarDelivery=true (as text)', ($client->queries[0]['C
 $client = stubClient([$feesAnswer]);
 carrier($om, quoter($om, stubGeocoder($tbilisi), $client))->collectRates(rateRequest($om, ['all_items' => [$cartItem(null)]]));
 check('car: no car → no CarDelivery in the query', !array_key_exists('CarDelivery', $client->queries[0]));
+
+// --- 2e. Delivery times ---
+// Which couriers take a time comes only from Quickshipper's hasScheduledDelivery,
+// never from the price id: here Glovo's "ASAP" says no, OnWay's "85" says yes.
+$withSchedule = $feesAnswer;
+$withSchedule['fees'][0]['hasScheduledDelivery'] = true;    // Wolt
+$withSchedule['fees'][1]['hasScheduledDelivery'] = true;    // OnWay
+$withSchedule['fees'][2]['hasScheduledDelivery'] = false;   // Glovo
+$withSchedule['fees'][2]['isActive'] = true;           // offered, so its flag is read
+$scheduled = $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]);
+carrier($om, quoter($om, stubGeocoder($tbilisi), stubClient([$withSchedule])), [], scheduled: $scheduled)
+    ->collectRates(rateRequest($om));
+check('time: couriers Quickshipper says take a time remembered', $scheduled->takesTime(2) && $scheduled->takesTime(25));
+check('time: courier that does not → no', !$scheduled->takesTime(12));
+$noFlag = $om->create(ScheduledCouriers::class, ['cache' => memoryCache()]);
+carrier($om, quoter($om, stubGeocoder($tbilisi), stubClient([$feesAnswer])), [], scheduled: $noFlag)
+    ->collectRates(rateRequest($om));
+check('time: flag missing or never quoted → no (safe default)', !$noFlag->takesTime(2) && !$noFlag->takesTime(99));
+
+$slotsWith = static function (array $o) use ($om, $scheduled): DeliverySlots {
+    $scope = overrideScope($o + [P . 'schedule/enabled' => '1', 'general/locale/timezone' => 'Asia/Tbilisi'],
+        $om->get(ScopeConfigInterface::class));
+
+    return $om->create(DeliverySlots::class, [
+        'config' => $om->create(Config::class, ['scopeConfig' => $scope]),
+        'timezone' => $om->create(\Magento\Framework\Stdlib\DateTime\Timezone::class, ['scopeConfig' => $scope]),
+        'scheduledCouriers' => $scheduled,
+    ]);
+};
+$early = new \DateTimeImmutable('2026-10-03T01:40:00Z');   // 05:40 in Tbilisi
+$slots = $slotsWith([])->getSlots(1, $early);
+check('time: defaults → today + 2 days, 10:00–20:00 in 2-hour slots', count($slots) === 15
+    && $slots[0] === ['value' => '2026-10-03T06:00:00Z', 'label' => 'Sat, 3 Oct, 10:00–12:00']
+    && end($slots)['label'] === 'Mon, 5 Oct, 18:00–20:00', json_encode([$slots[0], end($slots)]));
+$late = new \DateTimeImmutable('2026-10-03T13:30:00Z');    // 17:30 in Tbilisi
+check('time: 2 hours\' notice → no slot today after 17:30', count($slotsWith([])->getSlots(1, $late)) === 10
+    && $slotsWith([])->getSlots(1, $late)[0]['label'] === 'Sun, 4 Oct, 10:00–12:00');
+check('time: settings followed (1 day, 9–13, 1-hour slots)', array_column($slotsWith([P . 'schedule/days' => '1',
+    P . 'schedule/first_hour' => '9', P . 'schedule/last_hour' => '13', P . 'schedule/slot_hours' => '1'])
+    ->getSlots(1, $early), 'label')[0] === 'Sat, 3 Oct, 09:00–10:00');
+check('time: switched off → no slots', $slotsWith([P . 'schedule/enabled' => '0'])->getSlots(1, $early) === []);
+check('time: follows the courier\'s flag, not the price id', $slotsWith([])->acceptsTime('shuboqshpr_2_asap')
+    && !$slotsWith([])->acceptsTime('shuboqshpr_12_asap') && $slotsWith([])->acceptsTime('shuboqshpr_25_85')
+    && !$slotsWith([])->acceptsTime('flatrate_flatrate'));
+$timePlugin = $om->create(ShippingMethodDeliveryTime::class, ['deliverySlots' => $slotsWith([])]);
+$takesTimeOf = static fn (ShippingMethodInterface $m): ?bool => $m->getExtensionAttributes()?->getShuboQshprTakesTime();
+check('time: checkout marks the methods that take a time', $takesTimeOf($timePlugin->afterModelToDataObject(
+    $converter, $method('shuboqshpr', '2_asap'), $rate)) === true
+    && $takesTimeOf($timePlugin->afterModelToDataObject($converter, $method('shuboqshpr', '25_85'), $rate)) === true);
+check('time: no mark for a courier that does not, nor other carriers', $takesTimeOf($timePlugin->afterModelToDataObject(
+    $converter, $method('shuboqshpr', '12_asap'), $rate)) === null
+    && $takesTimeOf($timePlugin->afterModelToDataObject($converter, $method('flatrate', 'flatrate'), $rate)) === null);
+check('time: any chosen time described in store time', $slotsWith([])->describe('2026-10-04T08:00:00Z', 1)
+    === 'Sun, 4 Oct, 12:00–14:00');
+
+$offered = $slotsWith([])->getSlots(1)[0]['value'] ?? '';
+$saveWith = static function (string $method, string $time) use ($om, $slotsWith): array {
+    $info = $om->create(\Magento\Checkout\Api\Data\ShippingInformationInterface::class);
+    $address = $om->create(\Magento\Quote\Model\Quote\Address::class);
+    [$carrier, $code] = explode('_', $method, 2);
+    $info->setShippingAddress($address)->setShippingCarrierCode($carrier)->setShippingMethodCode($code);
+    $extension = $om->get(\Magento\Framework\Api\ExtensionAttributesFactory::class)
+        ->create(\Magento\Checkout\Api\Data\ShippingInformationInterface::class);
+    $extension->setShuboQshprDeliveryTime($time);
+    $info->setExtensionAttributes($extension);
+    $carts = new class ($om->create(\Magento\Quote\Model\Quote::class)->setStoreId(1)) implements \Magento\Quote\Api\CartRepositoryInterface {
+        public function __construct(private $quote)
+        {
+        }
+
+        public function get($cartId)
+        {
+            return $this->quote;
+        }
+
+        public function getList(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
+        {
+            throw new \RuntimeException('not used');
+        }
+
+        public function getForCustomer($customerId, array $sharedStoreIds = [])
+        {
+            throw new \RuntimeException('not used');
+        }
+
+        public function getActive($cartId, array $sharedStoreIds = [])
+        {
+            return $this->quote;
+        }
+
+        public function getActiveForCustomer($customerId, array $sharedStoreIds = [])
+        {
+            throw new \RuntimeException('not used');
+        }
+
+        public function save(\Magento\Quote\Api\Data\CartInterface $quote)
+        {
+        }
+
+        public function delete(\Magento\Quote\Api\Data\CartInterface $quote)
+        {
+        }
+    };
+    $plugin = $om->create(SaveDeliveryTime::class, ['deliverySlots' => $slotsWith([]), 'cartRepository' => $carts]);
+    try {
+        $plugin->beforeSaveAddressInformation($om->get(\Magento\Checkout\Model\ShippingInformationManagement::class), 1, $info);
+        $error = '';
+    } catch (\Magento\Framework\Exception\InputException $e) {
+        $error = $e->getMessage();
+    }
+
+    return [$address->getData(SaveDeliveryTime::ADDRESS_FIELD), $error];
+};
+check('save: an offered slot for a courier that takes a time is kept', $offered !== ''
+    && $saveWith('shuboqshpr_2_asap', $offered) === [$offered, '']
+    && $saveWith('shuboqshpr_25_85', $offered) === [$offered, '']);
+check('save: a time not offered is refused', str_contains($saveWith('shuboqshpr_2_asap', '2020-01-01T08:00:00Z')[1], 'no longer available'));
+check('save: other deliveries clear the time', $saveWith('shuboqshpr_12_asap', $offered) === [null, '']
+    && $saveWith('flatrate_flatrate', $offered) === [null, '']);
+check('save: "as soon as possible" clears the time', $saveWith('shuboqshpr_2_asap', '') === [null, '']);
 
 // --- 3. LIVE sandbox ---
 [$liveUser, $livePassword] = sandboxCredentials();

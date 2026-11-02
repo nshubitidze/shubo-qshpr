@@ -17,6 +17,10 @@
 // LOGOS=0 skips the courier logo check (for a store with logos switched off).
 // COD=hidden|shown checks Magento's Cash On Delivery payment at the payment step
 // (needs it enabled): hidden when the chosen courier cannot collect cash.
+// SCHEDULE=1 (needs "Let Customers Choose a Delivery Time" on and a courier
+// whose hasScheduledDelivery is true, e.g. COURIER=2): picks the second offered delivery time and checks
+// it is shown; prints it with the order. SCHEDULE=hidden checks that the
+// chosen courier (one whose hasScheduledDelivery is false) gets no list.
 // COURIER=<Quickshipper courier id> (e.g. 2 = Wolt) orders with that courier,
 // to the second Tbilisi address (a shorter trip), instead of the cheapest.
 
@@ -142,6 +146,21 @@ async function quickshipperRates(page) {
         await page.waitForSelector(pick, { timeout: 60000 });
         const chosen = await page.locator(pick).first().getAttribute('value');
         await page.locator(pick).first().check();
+        let deliveryTime = '';
+        if (process.env.SCHEDULE === '1') {
+            const select = page.locator('select[name=shubo_qshpr_delivery_time]');
+            const shown = await select.isVisible().catch(() => false);
+            const choices = shown ? await select.locator('option').allInnerTexts() : [];
+            check('courier that takes a time → delivery time list (as soon as possible + slots)', shown && choices.length > 2
+                && choices[0] === 'As soon as possible', choices.slice(0, 4).join(' | '));
+            if (shown && choices.length > 2) {
+                await select.selectOption({ index: 2 });
+                deliveryTime = choices[2];
+            }
+        } else if (process.env.SCHEDULE === 'hidden') {
+            const shown = await page.locator('select[name=shubo_qshpr_delivery_time]').isVisible().catch(() => false);
+            check(`courier that takes no time (${chosen}) → no delivery time list`, !shown);
+        }
         await shot(page, '3-chosen');
         await page.click('button[data-role=opc-continue]');
 
@@ -163,7 +182,8 @@ async function quickshipperRates(page) {
         const orderNumber = (await page.locator('.checkout-success .order-number strong, .checkout-success p span').first().innerText()).trim();
         await shot(page, '4-success');
         check('order placed with a Quickshipper method', /^\d+$/.test(orderNumber),
-            `order ${orderNumber}, method ${chosen}, summary "${summaryShipping.replace(/\s+/g, ' ').trim()}"`);
+            `order ${orderNumber}, method ${chosen}, summary "${summaryShipping.replace(/\s+/g, ' ').trim()}"`
+                + (deliveryTime ? `, delivery time ${deliveryTime}` : ''));
     } catch (e) {
         if (e.ratesOnly) {
             await browser.close();

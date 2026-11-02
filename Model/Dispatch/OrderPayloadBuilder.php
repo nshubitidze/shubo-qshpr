@@ -51,6 +51,7 @@ class OrderPayloadBuilder
      * @param array<string,int>|null $cashOnDelivery deliveryPrice and parcelPrice in tetri: what the
      *     courier collects for an order paid in cash at the door; null otherwise.
      * @param bool $carDelivery Ask for a courier with a car.
+     * @param string|null $scheduledTime Delivery time (UTC ISO 8601); null = as soon as possible.
      * @return array<string, mixed>
      * @throws DispatchException When the pickup point is incomplete or the customer has no phone.
      */
@@ -67,6 +68,7 @@ class OrderPayloadBuilder
         ?int $storeId,
         ?array $cashOnDelivery = null,
         bool $carDelivery = false,
+        ?string $scheduledTime = null,
     ): array {
         try {
             $pickup = $this->config->getPickupPoint($storeId);
@@ -133,6 +135,10 @@ class OrderPayloadBuilder
 
         if ($carDelivery) {
             $payload['carDelivery'] = true;
+        }
+
+        if ($scheduledTime !== null) {
+            $payload['scheduledTime'] = $scheduledTime;
         }
 
         return $payload;
