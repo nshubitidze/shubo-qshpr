@@ -4,6 +4,8 @@ What the sandbox actually does, by topic. Observed with a merchant sandbox
 account (`delivery-test.quickshipper.ge`) from 2026-09-29 on; each fact
 carries the date it was last seen. Where this disagrees with the docs, this
 wins. Production may differ — production facts are marked as such.
+Quickshipper's own answers to our questions are added where they explain
+what was seen, tagged [vendor 2026-11-06].
 
 ## Authentication
 
@@ -27,10 +29,15 @@ wins. Production may differ — production facts are marked as such.
 - **Intra-city only in the sandbox**: Tbilisi→Tbilisi and Batumi→Batumi
   quote; Tbilisi→Batumi/Kutaisi/Rustavi give `fees: []` with
   `success: true` — a normal "nothing offered". [live 2026-09-30]
+  Quickshipper: a sandbox limitation, not a problem in production.
+  [vendor 2026-11-06] Production intercity quotes not yet seen.
 - **`amount` already includes `serviceFee`.** While the account's fee was
   waived every courier was exactly the fee cheaper, and booking took exactly
   `amount` from the balance. So the merchant pays `amount`; `serviceFee`
   (0.60 ₾ normally) is Quickshipper's part of it. [live 2026-11-01]
+  The sandbox fee has **no VAT** because it is not really charged; in
+  production the fee is 0.60 ₾ + VAT [vendor 2026-11-06] — whether
+  production's `amount` includes that VAT is not yet seen.
 - **Price ids are opaque** and differ per courier: OnWay `"85"`/`"86"`/`"87"`
   (weight brackets), Wolt `"asap"`, Glovo `"ASAP"`; scheduled prices Wolt
   `"custom"`, Glovo `"CustomDate"`. `deliverySpeedId` is **null** for Wolt
@@ -45,7 +52,13 @@ wins. Production may differ — production facts are marked as such.
   `minWeightForCarDelivery`: Wolt 11000 (unit unclear), others 0.
   [live 2026-10-03]
 - **`CartAmount` changed nothing** (150 to 5000 ₾) — Wolt is quoted even
-  above its 1,000 ₾ parcel-value cap. [live 2026-11-02]
+  above its 1,000 ₾ parcel-value cap. [live 2026-11-02] Explained: it only
+  feeds price-by-cart-amount rules set on the dashboard's integration page,
+  and the sandbox account has none. [vendor 2026-11-06]
+- **Parcel size** changes the price for some couriers (`Parcels` /
+  `parcelDimensionId`, `api.md`). [vendor 2026-11-06] Not yet tried.
+- **Rate limit**: 120 `/fees` requests per minute per account
+  (recommended). [vendor 2026-11-06]
 - **No courier filter** in the request; couriers are switched on/off for the
   whole account (`isActive`). [spec][live 2026-10-01]
 - **Instant vs scheduled**: instant prices are `asap`/`ASAP` ("45-60 min
@@ -71,32 +84,47 @@ wins. Production may differ — production facts are marked as such.
   "assign the courier company automatically" → `ReadyForPickup` at once;
   "after the order is confirmed" → `Draft`, sent on only by
   `POST /v1/Order/confirm`. The order field `autoAssign: true` does **not**
-  override it. [live 2026-10-01]
+  override it. [live 2026-10-01] `autoAssign` is for the merchant's own
+  couriers only, and nothing in the API changes this setting per order.
+  [vendor 2026-11-06]
 - **A Draft can be neither cancelled nor deleted** ("Order status change
   failed", "Order delete is restricted") and its price stays held; confirm
-  it, then cancel. No expiry seen within 1.5 h. [live 2026-10-01]
+  it, then cancel. No expiry seen within 1.5 h. [live 2026-10-01] Asked how
+  to drop one: Quickshipper's answer was to contact its support.
+  [vendor 2026-11-06]
 - **Confirm** takes 3–10 s, changes no money, sets `externalOrderId` (the
   courier company's id). [live 2026-10-01]
-- **Confirming a Draft replaces `scheduledTime` with "now"**; in automatic
-  mode a scheduled order keeps its time. [live 2026-11-01]
+- **Confirming a Draft replaces `scheduledTime`** with the confirm time +
+  ~55 min; in automatic mode a scheduled order keeps its time.
+  [live 2026-11-01] By design: the added time is the average a courier needs
+  to reach the pickup. [vendor 2026-11-06] So a **scheduled delivery only
+  keeps its time in automatic mode**.
 - **A refused create can leave a cancelled order behind** (Draft →
   Cancelled within a second, with the reason as a comment) while the answer
   says `orderId 0`. Treat `success:false` as "not booked", but expect a
   cancelled entry in the merchant's order list. [live 2026-10-01]
 - **`integrationOrderId` is stored and shown in the dashboard** ("internal
-  order code") **but never returned by the API**; store Quickshipper's
-  `orderId` yourself. `externalOrderId` is the courier company's id.
-  [live 2026-10-01]
+  order code") **but not returned by `GET /v1/Order` or `/list`**; store
+  Quickshipper's `orderId` yourself. `externalOrderId` is the courier
+  company's id. [live 2026-10-01] `GET /v1/Order/list` takes it as a
+  filter (`IntegrationOrderId`). [spec][vendor 2026-11-06] Not yet tried.
 - Phones: `phonePrefix "+995"` + a number typed with +995 is cleaned by
   Quickshipper (stored once). [live 2026-10-01]
 - `carDelivery` and `parcelDimensions` are accepted but not echoed by
-  `GET /v1/Order`. [live 2026-10-03]
+  `GET /v1/Order`. [live 2026-10-03] Quickshipper is checking whether it
+  should return the dimensions. [vendor 2026-11-06]
+- **The price can change after booking**: a wrong address or other order
+  data, a wrong weight, or a failed delivery can change the courier's
+  tariff. [vendor 2026-11-06] Whether the new price shows in the API is not
+  answered.
 
 ## Cancelling — `POST /v1/Order/status {status: "Cancelled"}`
 
 - Works before a courier is assigned: the delivery price comes back, the
   service fee is kept (unless waived). `orderPrice` then shows the fee.
   [live 2026-10-01]
+- After a courier is assigned (or a Draft): Quickshipper asks to cancel
+  through its support. [vendor 2026-11-06]
 - `statusLogs` show the Draft entry only after the order has moved on.
   [live 2026-10-01]
 
@@ -125,11 +153,16 @@ wins. Production may differ — production facts are marked as such.
   [live 2026-10-01]
 - **Not signed**: only `Content-Type`, `Traceparent`, `X-Correlation-Id`
   and proxy headers. Treat the body as a hint and re-read the order; a
-  secret in the URL keeps strangers out. [live 2026-10-01]
+  secret in the URL keeps strangers out. [live 2026-10-01] There is no HMAC;
+  a webhook registered with an `apiKey` gets it in an `apikey` header on
+  every call. [vendor 2026-11-06] Header not yet seen live. Calls come from
+  fixed IPs (list on request). [vendor 2026-11-06]
 - **No webhook for a Draft's creation.** Webhooks for a change our own call
   causes arrive **while that call is still running**; calls answered 503
   were **not retried** within 20 minutes despite `maxRetryCount: 3`.
   Take the status our call causes from its own answer. [live 2026-10-01]
+  The sandbox sends only once; production retries up to 5 times, after 1,
+  5, 15, 30 and 60 minutes. [vendor 2026-11-06]
 
 ## Sandbox specifics
 
@@ -139,6 +172,12 @@ wins. Production may differ — production facts are marked as such.
 - **OnWay orders fail** in the sandbox ("OnWay service failed"); Wolt works
   and goes to Wolt Drive's development environment (no real courier).
   [live 2026-10-01]
+- **Sandbox Wolt/Glovo orders never move past `ReadyForPickup`.** To test
+  statuses: create an order **without a courier** through the Delivery API
+  and change its status by hand in the dashboard (`test.quickshipper.ge`);
+  the webhook is still sent. The order must be created through the API.
+  [vendor 2026-11-06] Not yet tried; how to create an order without a
+  courier is not stated.
 - The waybill (`GET /v1/Order/waybill`) fails on the sandbox server
   ("Unable to load shared library 'libwkhtmltox'"). [live 2026-10-01]
 - `GET /v1/Order/custom-fields` for a shop without custom fields answers
@@ -157,9 +196,15 @@ courier terms (https://qshpr.com/en/post/57); re-check, they change.
   Wolt caps a parcel's value at 1,000 ₾ incl. VAT
   (https://qshpr.com/ka/post/54); cancellation fees follow the courier's
   rules.
-- Cash on delivery depends on the courier (some forbid it).
+- Cash on delivery depends on the courier (some forbid it). But
+  Quickshipper now says it has **no COD service** [vendor 2026-11-06] — do
+  not offer or send cash on delivery until this is cleared up.
 - The recipient gets the tracking link by SMS when an order is placed
-  (§2.4–2.5).
+  (§2.4–2.5). Quickshipper: by default the SMS goes when the order moves to
+  `OnTheWay`. [vendor 2026-11-06]
+- Billing: services are invoiced monthly, payable within 5 working days
+  (§3.4); asked how that fits the balance taken at booking, Quickshipper
+  repeated the clause. [vendor 2026-11-06]
 
 ## Documentation errors
 

@@ -27,8 +27,11 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=password&scope=DeliveryApi&username=<login email>&password=<password>
 ```
 
-- Sandbox client: `DeliveryApiClient:DeliveryApiSecret` (public, [docs]).
-  Production client: issued by Quickshipper, not published.
+- Client: `DeliveryApiClient:DeliveryApiSecret` (public, [docs]). Quickshipper
+  says production currently uses the same client [vendor 2026-11-06] (their
+  e-mail swapped the labels "client" and "secret"; the pair above is the
+  one that works). Not yet tried against production. Every merchant uses
+  this client with their own dashboard login — no per-merchant client.
 - The body **must be form-encoded**. The docs example shows a JSON body; the
   server rejects it (`invalid_request: The mandatory 'grant_type' parameter is
   missing`). [live 2026-09-29]
@@ -40,7 +43,10 @@ grant_type=password&scope=DeliveryApi&username=<login email>&password=<password>
   `scope:"DeliveryApi"`, `email`, `role`. [live 2026-09-29]
 - Discovery also lists `client_credentials`, `refresh_token` grants; the spec
   declares a `clientCredentials` flow for scope `DeliveryApi`. Not offered to
-  merchants (see `open-questions.md`).
+  merchants.
+- Production does not require the caller's IP to be allow-listed, but
+  Quickshipper recommends it ("not required, but desirable"): send them the
+  server's IP. [vendor 2026-11-06]
 - Every Delivery API call: `Authorization: Bearer <token>`,
   `Content-Type: application/json`.
 
@@ -69,7 +75,25 @@ Query [spec]: `FromStreetName, FromCityName, FromLatitude, FromLongitude,
 ToStreetName, ToCityName, ToLatitude, ToLongitude` (docs mark all 8
 required; spec marks none; live: coordinates alone work, but Glovo then drops out),
 `CartWeight` (kg), `CartAmount` (GEL), `CarDelivery` (bool),
-`ScheduleDelivery.ProviderId`, `ScheduleDelivery.ScheduledDate`.
+`ScheduleDelivery.ProviderId`, `ScheduleDelivery.ScheduledDate`,
+`Parcels` (one entry per box: `parcels[0].width=30&parcels[0].height=20&parcels[0].length=15`),
+`CardOnDelivery` (bool, "adds the configured transaction fee where
+supported"). [spec 2026-11-06]
+
+- **Parcel size changes the price for some couriers.** Send it either as
+  `Parcels` (+ `CartWeight`) or as a `parcelDimensionId` the customer picked
+  from the possible values; `parcels` are the boxes the courier takes.
+  Quickshipper says its docs on this are out of date and points to the
+  spec. [vendor 2026-11-06] Not yet tried live. `GET /v1/Order/weights`
+  (`FromLatitude…ToLongitude, ProviderId, DeliverySpeedId, CartAmount`)
+  returns weight brackets with `parcelDimensionsId`, `minWeight`,
+  `maxWeight`, `userPrice` — probably those values (unconfirmed). [spec]
+- **`CartAmount`** feeds delivery-price rules the merchant sets on the
+  dashboard's integration page (price by cart amount); without such rules it
+  can be ignored. [vendor 2026-11-06]
+- **Rate limit**: recommended at most **120 requests per minute per
+  account**. [vendor 2026-11-06] What an excess call gets (e.g. HTTP 429) is
+  unknown.
 
 Response: `fees[]` of `ProviderDeliveryFeeModel` + `distance` (km):
 
@@ -95,9 +119,22 @@ Response: `fees[]` of `ProviderDeliveryFeeModel` + `distance` (km):
 `parcels[]` {`fields[]` {id,value,type}}; `generalFields[]`;
 `carDelivery`, `comment`, `scheduledTime`, `autoAssign`,
 `courierTransportType`, `courier` (own-fleet), **`integrationOrderId`** (our
-reference — stored and shown in the dashboard, but not returned by the API;
-`externalOrderId` is the courier's id [live 2026-10-01]), `dropThePin`,
-`cashOnDelivery` {`deliveryPrice`, `parcelPrice`}, `cartAmount`, `cartWeight`.
+reference — stored and shown in the dashboard, not returned by
+`GET /v1/Order`, but a filter of `GET /v1/Order/list`; `externalOrderId` is
+the courier's id [live 2026-10-01]), `dropThePin`,
+`cashOnDelivery` {`deliveryPrice`, `parcelPrice`, `paymentMethod` (0/1)},
+`cartAmount`, `cartWeight`, top-level `parcelDimensionId`, `parcels[]`
+{`width`, `height`, `length`, `fields[]`} [spec 2026-11-06].
+- **`autoAssign`** is for a merchant's **own couriers** (automatic
+  distribution to them; dashboard → delivery settings → "automatic order
+  distribution"). It does nothing for courier companies and cannot change
+  the "assign after confirmation" (Draft) setting per order.
+  [vendor 2026-11-06]
+- **Cash on delivery**: Quickshipper says it has **no COD service**
+  [vendor 2026-11-06], although the spec still has `cashOnDelivery` here,
+  `hasCashOnDelivery` in prices and `CardOnDelivery` on `/fees`. Do not send
+  `cashOnDelivery` until Quickshipper explains these fields
+  (`open-questions.md`).
 Docs mark required: dropOff `address, latitude, longitude, name, phonePrefix,
 phone, city`; pickUp `address, latitude, name, phone, city`.
 Response `OrderPlaceResponseModel`: `orderId` (int), `orderStatus`,
@@ -118,29 +155,42 @@ approximateDeliveryMin, scheduledTime, deliveryStartDate, createDate,
 `note`}, `customer`, `shop`. Unknown id →
 HTTP 200 `success:false, httpStatusCode:404`. [spec][live]
 
+**`GET /v1/Order/list`** — query `FromDate, ToDate, Status,
+IntegrationOrderId, Limit, Page`. Finds our orders by `integrationOrderId`
+(e.g. after a booking that got no answer). [spec][vendor 2026-11-06] Not yet
+tried live: answer shape and whether the filter is exact are unknown.
+
 **`POST /v1/Order/status`** — `{orderId, status, orderComment}`. Used for
 cancellation. Cancelling only works if no courier is assigned yet, or if the
 provider allows cancellation through the integration; some providers require a
 written request. Invalid status → `"Bogus is not valid status"` (400 in body). [docs][live]
+Quickshipper's advice for cancelling: contact its support. [vendor 2026-11-06]
 
 ### Account
 
 - `GET /v1/Account` — `apiKey`, `googleMapKey`, `defaultGoogleMapKey`,
   `shopName`, `userName`, `balance` (e.g. `"0 ₾"` — a string), `hasProviders`. [spec][live]
 
-Endpoints the module does not call (order list and edit, delete, waybill,
-weight brackets, custom fields, provider settings, own-fleet couriers) are
-in the spec.
+Endpoints the module does not call (order edit, delete, waybill, weight
+brackets, custom fields, provider settings, own-fleet couriers) are in the
+spec.
 
 ### Webhooks
 
-- `POST /v1/Webhook` `{callBackUrl, maxRetryCount, type}` → `webhookId`.
-- `PUT /v1/Webhook` `{id, maxRetryCount, isActive, type, callbackUrl}`.
-- `GET /v1/Webhook` → `webhooks[]`.
+- `POST /v1/Webhook` `{callBackUrl, maxRetryCount, type, apiKey}` → `webhookId`.
+- `PUT /v1/Webhook` `{id, maxRetryCount, isActive, type, callbackUrl, apiKey}`.
+  [spec 2026-11-06]
+- `GET /v1/Webhook` → `webhooks[]` (`id, callBackUrl, isActive, type,
+  maxRetryCount` — the `apiKey` is not listed). [spec]
 - Types: `OrderStatusChange`, `CourierLocation`. [docs]
-- Payload, signing and retries are not documented; what was observed is in
-  `live-findings.md` (PascalCase body, no signature): treat a call as a hint
-  and re-read the order with `GET /v1/Order`.
+- **Authentication**: the `apiKey` given at registration is sent with every
+  call in an **`apikey` header**. No HMAC signature. [vendor 2026-11-06]
+- **Retries** (production): up to **5**, after 1, 5, 15, 30 and 60 minutes.
+  The sandbox currently sends **once**. [vendor 2026-11-06]
+- **Source IPs** are fixed, from a set; Quickshipper sends the list for an
+  allow-list on request. [vendor 2026-11-06]
+- What was observed is in `live-findings.md` (PascalCase body): treat a
+  call as a hint and re-read the order with `GET /v1/Order`.
 
 ## Enums
 
