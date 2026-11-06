@@ -24,9 +24,9 @@ Asked by e-mail and not (fully) answered on 2026-11-06 is marked *(asked)*.
 
 - Unit of `minWeightForCarDelivery`; each courier's real weight limits; what
   `carDelivery` and `parcelDimensions` change after booking (price, vehicle).
-- Parcel size: which couriers price by it; where the `parcelDimensionId`
-  values come from (`GET /v1/Order/weights`?); does `GET /v1/Order` return
-  the dimensions (Quickshipper is checking).
+- Parcel size: which couriers price by it (none of the sandbox's Wolt,
+  Glovo, OnWay did on 2026-11-07); does `GET /v1/Order` return the sizes
+  (Quickshipper is checking).
 - How to drop a never-confirmed Draft through the API *(asked: "contact
   support")*; do Drafts expire and is the money returned?
 - If the courier company refuses at `/v1/Order/confirm`, what state is the

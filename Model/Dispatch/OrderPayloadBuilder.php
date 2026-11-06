@@ -49,6 +49,7 @@ class OrderPayloadBuilder
      * @param int|null $storeId
      * @param bool $carDelivery Ask for a courier with a car.
      * @param string|null $scheduledTime Delivery time (UTC ISO 8601); null = as soon as possible.
+     * @param array<int,array<string,float>> $parcels The boxes (cm); none when unknown.
      * @return array<string, mixed>
      * @throws DispatchException When the pickup point is incomplete or the customer has no phone.
      */
@@ -65,6 +66,7 @@ class OrderPayloadBuilder
         ?int $storeId,
         bool $carDelivery = false,
         ?string $scheduledTime = null,
+        array $parcels = [],
     ): array {
         try {
             $pickup = $this->config->getPickupPoint($storeId);
@@ -128,6 +130,15 @@ class OrderPayloadBuilder
 
         if ($scheduledTime !== null) {
             $payload['scheduledTime'] = $scheduledTime;
+        }
+
+        // One entry per physical box (top-level "parcels"; provider.parcelDimensions is deprecated).
+        if ($parcels !== []) {
+            $payload['parcels'] = array_map(static fn (array $parcel): array => [
+                'length' => $parcel['length'],
+                'width' => $parcel['width'],
+                'height' => $parcel['height'],
+            ], array_values($parcels));
         }
 
         return $payload;

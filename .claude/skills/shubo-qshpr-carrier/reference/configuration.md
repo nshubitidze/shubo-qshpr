@@ -63,6 +63,13 @@ changes `Config`.
 | `car_delivery_attribute` Car Delivery Attribute | — | D | One of the store's own Yes/No product attributes (`YesNoProductAttribute` lists only user-defined ones) |
 | `car_delivery_default` Car Delivery by Default | 0 | D W | |
 | `car_delivery_from_weight` Car Delivery from Weight (kg) | — | D W | Empty = not used |
+
+## Parcel size (group `parcel_size`)
+
+| Field | Default | Scope | Notes |
+|---|---|---|---|
+| `length_attribute`, `width_attribute`, `height_attribute` | — | D | The store's own number attributes (text / price / weight input, `NumberProductAttribute`). Sizes are sent only when all three are chosen |
+| `unit` Size Unit | cm | D | cm, mm, m, in; converted to cm (`SizeUnit`) |
 | `sallowspecific`, `specificcountry` | 1, GE | D W | |
 | `sort_order` | 10 | D W | |
 

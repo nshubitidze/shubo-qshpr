@@ -1,6 +1,6 @@
 ---
 name: shubo-qshpr-carrier
-description: How the Shubo_Qshpr Magento 2 module (Quickshipper delivery carrier for Georgian shops — Wolt, Glovo, OnWay and other couriers) works and how to change it safely — checkout rates, geocoding, booking from Submit Shipment or automatically, Draft confirm and reuse, status webhook and polling, cancel / book again / cancel on refund, delivery time and opening hours, cash on delivery, car delivery, courier logos, admin balance; its settings, delivery table, crons, logs, design decisions, known limits, and the checks to run after a change. Use when reading, modifying, extending, configuring, testing or debugging Shubo_Qshpr.
+description: How the Shubo_Qshpr Magento 2 module (Quickshipper delivery carrier for Georgian shops — Wolt, Glovo, OnWay and other couriers) works and how to change it safely — checkout rates, geocoding, booking from Submit Shipment or automatically, Draft confirm and reuse, status webhook and polling, cancel / book again / cancel on refund, delivery time and opening hours, parcel size, cash on delivery, car delivery, courier logos, admin balance; its settings, delivery table, crons, logs, design decisions, known limits, and the checks to run after a change. Use when reading, modifying, extending, configuring, testing or debugging Shubo_Qshpr.
 ---
 
 # Shubo_Qshpr — the module skill
@@ -37,7 +37,7 @@ What the module does, end to end:
 |---|---|
 | Find the class that does something; understand the delivery table, its states, the lock | `reference/architecture.md` |
 | Know what an admin setting does, its default and scope | `reference/configuration.md` |
-| Follow a flow: rates, order placed, booking, Draft, automatic booking, status, cancel, refund, cash, car, delivery time, opening hours | `reference/flows.md` |
+| Follow a flow: rates, order placed, booking, Draft, automatic booking, status, cancel, refund, cash, car, delivery time, opening hours, parcel size | `reference/flows.md` |
 | Know **why** something is built the way it is, before changing it | `reference/decisions.md` |
 | Add or change something (a setting, a geocoder, a booking field, a state, a cron, checkout JS) | `reference/changing.md` |
 | Debug a problem, or know the module's limits | `reference/troubleshooting.md` |

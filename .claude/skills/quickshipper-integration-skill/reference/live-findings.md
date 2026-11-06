@@ -56,7 +56,12 @@ what was seen, tagged [vendor 2026-11-06].
   feeds price-by-cart-amount rules set on the dashboard's integration page,
   and the sandbox account has none. [vendor 2026-11-06]
 - **Parcel size** changes the price for some couriers (`Parcels` /
-  `parcelDimensionId`, `api.md`). [vendor 2026-11-06] Not yet tried.
+  `parcelDimensionId`, `api.md`). [vendor 2026-11-06] Tried on the sandbox:
+  `Parcels[i].Length/Width/Height` is read (a non-number gets a 400
+  validation error; key case does not matter), but **no price changed** for
+  Wolt, Glovo or OnWay at 1.5 or 8 kg, from one 20×15×10 box to one
+  800×600×500 box or three boxes. Only `CartWeight` moves OnWay's price
+  (its weight brackets). Tool: `qshpr-parcel-probe.php`. [live 2026-11-07]
 - **Rate limit**: 120 `/fees` requests per minute per account
   (recommended). [vendor 2026-11-06]
 - **No courier filter** in the request; couriers are switched on/off for the
@@ -111,7 +116,8 @@ what was seen, tagged [vendor 2026-11-06].
 - Phones: `phonePrefix "+995"` + a number typed with +995 is cleaned by
   Quickshipper (stored once). [live 2026-10-01]
 - `carDelivery` and `parcelDimensions` are accepted but not echoed by
-  `GET /v1/Order`. [live 2026-10-03] Quickshipper is checking whether it
+  `GET /v1/Order`. [live 2026-10-03] So is the top-level `parcels[]`
+  {length, width, height} (order 42861, two boxes). [live 2026-11-07] Quickshipper is checking whether it
   should return the dimensions. [vendor 2026-11-06]
 - **The price can change after booking**: a wrong address or other order
   data, a wrong weight, or a failed delivery can change the courier's

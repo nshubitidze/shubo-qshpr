@@ -9,6 +9,7 @@ use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Store\Model\ScopeInterface;
 use Shubo\Qshpr\Exception\PickupNotConfiguredException;
 use Shubo\Qshpr\Exception\QshprApiException;
+use Shubo\Qshpr\Model\Config\Source\SizeUnit;
 use Shubo\Qshpr\Model\Ui\ConfigProvider;
 
 /**
@@ -58,6 +59,11 @@ class Config
     private const string FIELD_OPENS_AT = 'opening_hours/opens_at';
     private const string FIELD_CLOSES_AT = 'opening_hours/closes_at';
     private const string FIELD_CLOSED_DAYS = 'opening_hours/closed_days';
+    private const string PARCEL_SIZE_GROUP = 'parcel_size/';
+    private const string FIELD_PARCEL_LENGTH_ATTRIBUTE = self::PARCEL_SIZE_GROUP . 'length_attribute';
+    private const string FIELD_PARCEL_WIDTH_ATTRIBUTE = self::PARCEL_SIZE_GROUP . 'width_attribute';
+    private const string FIELD_PARCEL_HEIGHT_ATTRIBUTE = self::PARCEL_SIZE_GROUP . 'height_attribute';
+    private const string FIELD_PARCEL_SIZE_UNIT = self::PARCEL_SIZE_GROUP . 'unit';
     private const string FIELD_PICKUP_LATITUDE = 'pickup_latitude';
     private const string FIELD_PICKUP_LONGITUDE = 'pickup_longitude';
     private const string GEOCODING_GROUP = 'geocoding/';
@@ -345,6 +351,46 @@ class Config
     public function getCarDeliveryAttribute(): string
     {
         return trim((string)$this->scopeConfig->getValue(self::PATH_PREFIX . self::FIELD_CAR_DELIVERY_ATTRIBUTE));
+    }
+
+    /**
+     * Codes of the product attributes holding a parcel's length, width and height; null unless all three are chosen.
+     *
+     * Default scope only: product attributes are the same for every website.
+     *
+     * @return array{length: string, width: string, height: string}|null
+     */
+    public function getParcelSizeAttributes(): ?array
+    {
+        $codes = [];
+
+        foreach ([
+            'length' => self::FIELD_PARCEL_LENGTH_ATTRIBUTE,
+            'width' => self::FIELD_PARCEL_WIDTH_ATTRIBUTE,
+            'height' => self::FIELD_PARCEL_HEIGHT_ATTRIBUTE,
+        ] as $side => $field) {
+            $code = trim((string)$this->scopeConfig->getValue(self::PATH_PREFIX . $field));
+
+            if ($code === '') {
+                return null;
+            }
+
+            $codes[$side] = $code;
+        }
+
+        return $codes;
+    }
+
+    /**
+     * Centimetres per unit of the size attributes (Quickshipper takes cm); 1 for an unknown unit.
+     *
+     * @return float
+     */
+    public function getParcelSizeToCentimetres(): float
+    {
+        $unit = (string)$this->scopeConfig->getValue(self::PATH_PREFIX . self::FIELD_PARCEL_SIZE_UNIT);
+
+        return SizeUnit::TO_CENTIMETRES[$unit] ?? SizeUnit::TO_CENTIMETRES[SizeUnit::CENTIMETRE];
     }
 
     /**
