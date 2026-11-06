@@ -157,8 +157,9 @@ HTTP 200 `success:false, httpStatusCode:404`. [spec][live]
 
 **`GET /v1/Order/list`** — query `FromDate, ToDate, Status,
 IntegrationOrderId, Limit, Page`. Finds our orders by `integrationOrderId`
-(e.g. after a booking that got no answer). [spec][vendor 2026-11-06] Not yet
-tried live: answer shape and whether the filter is exact are unknown.
+(e.g. after a booking that got no answer). [spec][vendor 2026-11-06] Exact,
+case-sensitive match; answer and item fields in `live-findings.md`.
+[live 2026-11-06]
 
 **`POST /v1/Order/status`** — `{orderId, status, orderComment}`. Used for
 cancellation. Cancelling only works if no courier is assigned yet, or if the
@@ -185,6 +186,7 @@ spec.
 - Types: `OrderStatusChange`, `CourierLocation`. [docs]
 - **Authentication**: the `apiKey` given at registration is sent with every
   call in an **`apikey` header**. No HMAC signature. [vendor 2026-11-06]
+  Confirmed on the sandbox, also after setting it with `PUT`. [live 2026-11-06]
 - **Retries** (production): up to **5**, after 1, 5, 15, 30 and 60 minutes.
   The sandbox currently sends **once**. [vendor 2026-11-06]
 - **Source IPs** are fixed, from a set; Quickshipper sends the list for an
