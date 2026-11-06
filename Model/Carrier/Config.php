@@ -35,6 +35,14 @@ class Config
     private const string FIELD_SANDBOX_CLIENT_SECRET = 'sandbox_client_secret';
     private const string FIELD_PRODUCTION_CLIENT_ID = 'production_client_id';
     private const string FIELD_PRODUCTION_CLIENT_SECRET = 'production_client_secret';
+
+    /**
+     * Quickshipper's standard OAuth client: public (its API docs), the same
+     * for every shop, and — Quickshipper says — currently also production's.
+     * Used for production while its admin fields are empty.
+     */
+    private const string STANDARD_CLIENT_ID = 'DeliveryApiClient';
+    private const string STANDARD_CLIENT_SECRET = 'DeliveryApiSecret';
     private const string FIELD_AUTO_DISPATCH = 'auto_dispatch';
     private const string FIELD_CANCEL_ON_REFUND = 'cancel_on_refund';
     private const string FIELD_SHOW_LOGOS = 'show_logos';
@@ -212,8 +220,8 @@ class Config
 
     /**
      * OAuth client id for the active environment. The sandbox client is the
-     * public one from Quickshipper's docs (config.xml); the production client
-     * is issued per merchant and entered in the admin.
+     * public one from Quickshipper's docs (config.xml); production uses the
+     * same standard client unless the admin field holds another one.
      *
      * @param int|null $storeId
      * @param bool $strict Throw instead of returning an unconfigured (empty) value.
@@ -222,8 +230,9 @@ class Config
      */
     public function getClientId(?int $storeId = null, bool $strict = false): string
     {
-        $field = $this->isSandbox($storeId) ? self::FIELD_SANDBOX_CLIENT_ID : self::FIELD_PRODUCTION_CLIENT_ID;
-        $clientId = trim((string)$this->getValue($field, $storeId));
+        $clientId = $this->isSandbox($storeId)
+            ? trim((string)$this->getValue(self::FIELD_SANDBOX_CLIENT_ID, $storeId))
+            : (trim((string)$this->getValue(self::FIELD_PRODUCTION_CLIENT_ID, $storeId)) ?: self::STANDARD_CLIENT_ID);
 
         if ($strict && $clientId === '') {
             throw new QshprApiException(
@@ -235,7 +244,10 @@ class Config
     }
 
     /**
-     * OAuth client secret for the active environment (production: decrypted).
+     * OAuth client secret for the active environment.
+     *
+     * Production: decrypted from the admin field, or the standard client's
+     * while that field is empty.
      *
      * @param int|null $storeId
      * @param bool $strict Throw instead of returning an unconfigured (empty) value.
@@ -246,7 +258,8 @@ class Config
     {
         $secret = $this->isSandbox($storeId)
             ? (string)$this->getValue(self::FIELD_SANDBOX_CLIENT_SECRET, $storeId)
-            : $this->encryptor->decrypt((string)$this->getValue(self::FIELD_PRODUCTION_CLIENT_SECRET, $storeId));
+            : ($this->encryptor->decrypt((string)$this->getValue(self::FIELD_PRODUCTION_CLIENT_SECRET, $storeId))
+                ?: self::STANDARD_CLIENT_SECRET);
 
         if ($strict && $secret === '') {
             throw new QshprApiException(

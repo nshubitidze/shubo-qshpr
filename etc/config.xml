@@ -20,8 +20,9 @@
                 <sandbox_dashboard_url>https://test.quickshipper.ge</sandbox_dashboard_url>
                 <production_dashboard_url>https://dashboard.quickshipper.app</production_dashboard_url>
                 <!-- PUBLIC sandbox OAuth client, published in Quickshipper's API
-                     docs (Authorization section) — not a secret. The production
-                     client is issued by Quickshipper and entered in the admin. -->
+                     docs (Authorization section) — not a secret. Production uses
+                     the same client (Config::STANDARD_CLIENT_*) unless another
+                     is entered in the admin. -->
                 <sandbox_client_id>DeliveryApiClient</sandbox_client_id>
                 <sandbox_client_secret>DeliveryApiSecret</sandbox_client_secret>
                 <api_timeout>20</api_timeout>

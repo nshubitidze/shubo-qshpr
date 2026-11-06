@@ -28,8 +28,9 @@ OnWay and other couriers in Georgia.
   8.3–8.5.
 - Base currency **GEL**, shipping to Georgia.
 - A Quickshipper account with API access. For testing, a test account at
-  test.quickshipper.ge (sandbox). Live API client credentials are issued by
-  Quickshipper.
+  test.quickshipper.ge (sandbox). No separate API credentials are needed:
+  the module uses Quickshipper's standard API client with your dashboard
+  login.
 
 ## Install
 
@@ -53,7 +54,8 @@ are cron jobs.
 **Stores → Configuration → Sales → Delivery Methods → Quickshipper**
 
 1. Enabled, Sandbox Mode (Yes for a test account), Login Email and Password
-   of your Quickshipper dashboard; for live, the API Client ID and Secret.
+   of your Quickshipper dashboard (API Client ID and Secret stay empty unless
+   Quickshipper gives you your own).
 2. Pickup Latitude / Longitude of the place couriers collect from.
 3. **Stores → Configuration → Sales → Shipping Settings → Origin**: street and
    city of the pickup point; **General → Store Information**: store name and

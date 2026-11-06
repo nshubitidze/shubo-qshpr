@@ -44,7 +44,7 @@
                 <field id="production_client_id" translate="label comment" type="text" sortOrder="40"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>API Client ID</label>
-                    <comment>API client credentials for the live environment, issued by Quickshipper when API access is enabled for your account. Ask Quickshipper support if you do not have them.</comment>
+                    <comment>Empty: Quickshipper's standard client, the same for every shop.</comment>
                     <depends>
                         <field id="sandbox_mode">0</field>
                     </depends>
@@ -53,7 +53,7 @@
                 <field id="production_client_secret" translate="label comment" type="obscure" sortOrder="50"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>API Client Secret</label>
-                    <comment>Issued by Quickshipper together with the Client ID. Stored encrypted.</comment>
+                    <comment>Only with your own Client ID from Quickshipper. Stored encrypted.</comment>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
                     <depends>
                         <field id="sandbox_mode">0</field>
