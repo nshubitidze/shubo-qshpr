@@ -43,6 +43,7 @@
                     <kept>0</kept>
                     <opens_at>10</opens_at>
                     <closes_at>20</closes_at>
+                    <closed_days></closed_days>
                 </opening_hours>
                 <geocoding>
                     <geocoder>nominatim</geocoder>

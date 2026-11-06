@@ -57,6 +57,7 @@ class Config
     private const string FIELD_OPENING_HOURS_KEPT = 'opening_hours/kept';
     private const string FIELD_OPENS_AT = 'opening_hours/opens_at';
     private const string FIELD_CLOSES_AT = 'opening_hours/closes_at';
+    private const string FIELD_CLOSED_DAYS = 'opening_hours/closed_days';
     private const string FIELD_PICKUP_LATITUDE = 'pickup_latitude';
     private const string FIELD_PICKUP_LONGITUDE = 'pickup_longitude';
     private const string GEOCODING_GROUP = 'geocoding/';
@@ -100,6 +101,7 @@ class Config
     private const int DEFAULT_OPENS_AT = 10;
     private const int DEFAULT_CLOSES_AT = 20;
     private const int HOURS_PER_DAY = 24;
+    private const int DAYS_PER_WEEK = 7;
 
     /**
      * @param ScopeConfigInterface $scopeConfig
@@ -456,6 +458,28 @@ class Config
         $hour = (int)$this->getValue(self::FIELD_CLOSES_AT, $storeId);
 
         return $hour > 0 && $hour <= self::HOURS_PER_DAY ? $hour : self::DEFAULT_CLOSES_AT;
+    }
+
+    /**
+     * Weekdays the shop is closed, as PHP's "w" numbers (0 = Sunday … 6 = Saturday).
+     *
+     * Every day marked closed is treated as none closed, so a setting
+     * mistake never closes the shop for good.
+     *
+     * @param int|null $storeId
+     * @return list<int>
+     */
+    public function getClosedDays(?int $storeId = null): array
+    {
+        $days = [];
+
+        foreach (explode(',', (string)$this->getValue(self::FIELD_CLOSED_DAYS, $storeId)) as $day) {
+            if (ctype_digit(trim($day)) && (int)$day < self::DAYS_PER_WEEK) {
+                $days[(int)$day] = (int)$day;
+            }
+        }
+
+        return count($days) < self::DAYS_PER_WEEK ? array_values($days) : [];
     }
 
     /**

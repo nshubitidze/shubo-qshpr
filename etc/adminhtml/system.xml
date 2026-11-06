@@ -174,7 +174,7 @@
                 <group id="opening_hours" translate="label comment" type="text" sortOrder="94"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Opening Hours</label>
-                    <comment>The hours your shop hands parcels to couriers, every day, in store time. Delivery time slots are offered only within them. Quickshipper does not publish the couriers' working hours; keep these within them.</comment>
+                    <comment>The hours your shop hands parcels to couriers, in store time, on the days it is open. Delivery time slots are offered only within them. Quickshipper does not publish the couriers' working hours; keep these within them.</comment>
 
                     <field id="kept" translate="label comment" type="select" sortOrder="10"
                            showInDefault="1" showInWebsite="1" showInStore="0">
@@ -194,6 +194,13 @@
                         <comment>Store time, 2–24. Default: 20.</comment>
                         <validate>validate-digits validate-digits-range digits-range-2-24</validate>
                     </field>
+                    <field id="closed_days" translate="label comment" type="multiselect" sortOrder="40"
+                           showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Closed on</label>
+                        <comment>Days the shop hands no parcels to couriers, e.g. Saturday and Sunday. No delivery time is offered on them and, with "Book Couriers Only While Open", nothing is booked as soon as possible. None selected: open every day.</comment>
+                        <source_model>Magento\Config\Model\Config\Source\Locale\Weekdays</source_model>
+                        <can_be_empty>1</can_be_empty>
+                    </field>
                 </group>
 
                 <group id="schedule" translate="label comment" type="text" sortOrder="95"
@@ -204,13 +211,13 @@
                     <field id="enabled" translate="label comment" type="select" sortOrder="10"
                            showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Let Customers Choose a Delivery Time</label>
-                        <comment>Yes: for a courier that Quickshipper says takes a delivery time, checkout shows a "Delivery time" list with "As soon as possible" and the slots set below, within the opening hours. No: every delivery is as soon as possible. In the Quickshipper dashboard, let orders assign the courier automatically: with "after confirmation", Quickshipper was seen to replace the chosen time with "now" when the booking is confirmed (you are told in the order's history).</comment>
+                        <comment>Yes: for a courier that Quickshipper says takes a delivery time, checkout shows a "Delivery time" list with "As soon as possible" and the slots set below, within the opening hours. No: every delivery is as soon as possible. Works only when your Quickshipper dashboard assigns the courier automatically: with "after confirmation", Quickshipper replaces the chosen time with "now" plus the courier's time to reach you when the booking is confirmed (by design, Quickshipper says). You are told in the order's history when that happens.</comment>
                         <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     </field>
                     <field id="days" translate="label comment" type="text" sortOrder="20"
                            showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Days Ahead</label>
-                        <comment>How many days after today can be chosen. Default: 2.</comment>
+                        <comment>How many open days after today can be chosen (closed days are skipped). Default: 2.</comment>
                         <validate>validate-digits validate-greater-than-zero</validate>
                         <depends>
                             <field id="enabled">1</field>

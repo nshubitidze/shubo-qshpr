@@ -476,6 +476,7 @@ class DeliveryLog
      * @param int $paidAmount Shipping the customer paid for this delivery, in tetri.
      * @param Booking $booking
      * @param string $state STATE_DRAFTED or STATE_DISPATCHED.
+     * @param string|null $scheduledTime Delivery time booked (UTC ISO 8601); null = as soon as possible.
      * @return int Row id.
      */
     public function recordBooking(
@@ -488,9 +489,11 @@ class DeliveryLog
         int $paidAmount,
         Booking $booking,
         string $state,
+        ?string $scheduledTime = null,
     ): int {
         $connection = $this->resource->getConnection();
         $connection->insert($this->table(), [
+            'scheduled_time' => $scheduledTime,
             'order_id' => $orderId,
             'increment_id' => $incrementId,
             'store_id' => $storeId,

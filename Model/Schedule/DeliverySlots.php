@@ -59,10 +59,22 @@ class DeliverySlots
         $last = $this->config->getClosesAt($storeId);
         $length = $this->config->getScheduleSlotHours($storeId);
         $days = $this->config->getScheduleDays($storeId);
+        $closedDays = $this->config->getClosedDays($storeId);
+        $openDaysAhead = 0;
         $slots = [];
 
-        for ($day = 0; $day <= $days; $day++) {
+        // Today, then $days open days after it; closed days are skipped
+        // (never all seven, see Config::getClosedDays()).
+        for ($day = 0; $day === 0 || $openDaysAhead < $days; $day++) {
             $date = $now->setTime(0, 0)->modify(sprintf('+%d days', $day));
+
+            if (in_array((int)$date->format('w'), $closedDays, true)) {
+                continue;
+            }
+
+            if ($day > 0) {
+                $openDaysAhead++;
+            }
 
             for ($hour = $first; $hour + $length <= $last; $hour += $length) {
                 $start = $date->setTime($hour, 0);

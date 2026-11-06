@@ -403,7 +403,8 @@ class Dispatcher
         );
         $weightKg = $this->shipmentWeightKg($shipment, $storeId);
         $carDelivery = $this->carDeliveryRule->forShipment($shipment, $storeId, $weightKg);
-        $scheduledTime = $this->scheduledTime($order, $quoted);
+        // Book Courier Again keeps the time of the delivery it replaces while that is still ahead.
+        $scheduledTime = $this->scheduledTime($order, $quoted ?? $replaced);
         [$fee, $price] = $this->freshPrice(
             $order,
             $address,
@@ -473,7 +474,8 @@ class Dispatcher
             $latitude,
             $longitude,
             $booking,
-            $isDraft ? DeliveryLog::STATE_DRAFTED : DeliveryLog::STATE_DISPATCHED
+            $isDraft ? DeliveryLog::STATE_DRAFTED : DeliveryLog::STATE_DISPATCHED,
+            $scheduledTime
         );
 
         if ($isDraft) {
@@ -674,13 +676,15 @@ class Dispatcher
     }
 
     /**
-     * The delivery time the customer chose for the delivery they paid for, if it is still ahead.
+     * The delivery time the customer chose, if it is still ahead.
      *
-     * A time that has passed (or is about to) is booked as "as soon as
-     * possible", and the merchant is told in the order's history.
+     * Taken from the order's delivery row from checkout, or for Book Courier
+     * Again from the delivery being replaced. A time that has passed (or is
+     * about to) is booked as "as soon as possible", and the merchant is told
+     * in the order's history.
      *
      * @param Order $order
-     * @param array<string,mixed>|null $quoted The order's delivery row from checkout.
+     * @param array<string,mixed>|null $quoted The delivery row the time is taken from.
      * @return string|null UTC ISO 8601; null for "as soon as possible".
      */
     private function scheduledTime(Order $order, ?array $quoted): ?string
@@ -1001,6 +1005,7 @@ class Dispatcher
      * @param float $longitude
      * @param Booking $booking
      * @param string $state DeliveryLog::STATE_DRAFTED or STATE_DISPATCHED.
+     * @param string|null $scheduledTime The delivery time booked, for a new row (a quoted row has it already).
      * @return int|null Row id, null when the write failed.
      */
     private function record(
@@ -1011,6 +1016,7 @@ class Dispatcher
         float $longitude,
         Booking $booking,
         string $state,
+        ?string $scheduledTime = null,
     ): ?int {
         try {
             if ($quoted !== null && $this->deliveryLog->markBooked((int)$quoted['entity_id'], $booking, $state)) {
@@ -1026,7 +1032,8 @@ class Dispatcher
                 $longitude,
                 $booking->paidAmount,
                 $booking,
-                $state
+                $state,
+                $scheduledTime
             );
         } catch (\Throwable $e) {
             $this->logger->critical(sprintf(
