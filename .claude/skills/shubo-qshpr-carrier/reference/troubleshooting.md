@@ -54,6 +54,13 @@ The admin message says what happened and whether the shipment was saved.
 - A delivery without news for 7 days is reported once and no longer polled.
 - Webhooks for our own request arrive while the order is locked and get 503;
   that is expected — the status is taken from our request's answer.
+- `webhook: refused a call with a missing or wrong key` — neither the
+  `apikey` header nor the URL had the installation's key (e.g. the key was
+  regenerated, or another environment's webhook on the same account).
+  Press "Connect status updates" again. Accepted calls log `key from
+  header` or `key from url`; `url` only means the webhook was connected
+  before the header existed (press Connect again) or Quickshipper did not
+  send the header.
 
 ## Known limits
 

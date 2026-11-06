@@ -21,6 +21,11 @@ use Shubo\Qshpr\Model\QshprClient;
  * the Quickshipper account the store logs in with — or re-points the
  * webhook registered for the same address before, since Quickshipper
  * cannot delete webhooks.
+ *
+ * The key goes to Quickshipper twice: as the webhook's apiKey, which
+ * Quickshipper sends back in an "apikey" header, and in the URL. The URL
+ * copy stays until the header is seen working in production; webhooks
+ * connected before the header existed keep working with it.
  */
 class WebhookRegistrar
 {
@@ -69,15 +74,16 @@ class WebhookRegistrar
     {
         $base = rtrim($this->storeManager->getStore($storeId)->getBaseUrl(UrlInterface::URL_TYPE_LINK), '/')
             . '/' . self::WEBHOOK_PATH;
-        $url = $base . '?key=' . rawurlencode($this->key());
+        $key = $this->key();
+        $url = $base . '?key=' . rawurlencode($key);
         $existing = $this->findOurs($base, $storeId);
 
         if ($existing !== null) {
-            $this->client->updateWebhook($existing, $url, $storeId);
+            $this->client->updateWebhook($existing, $url, $key, $storeId);
             $action = self::ACTION_UPDATED;
             $webhookId = $existing;
         } else {
-            $webhookId = $this->client->createWebhook($url, $storeId);
+            $webhookId = $this->client->createWebhook($url, $key, $storeId);
             $action = self::ACTION_CREATED;
         }
 

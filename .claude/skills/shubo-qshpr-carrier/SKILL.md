@@ -49,7 +49,8 @@ What the module does, end to end:
   **`DeliveryLock`**.
 - A booking request is **never retried automatically**: a timeout may still
   have created (and charged) the order at Quickshipper.
-- A webhook body is only a hint: Quickshipper does not sign webhooks, so the
+- A webhook body is only a hint: Quickshipper does not sign webhooks (the
+  webhook key comes in the `apikey` header, or the URL), so the
   order is always read back from Quickshipper.
 - **No module-created product attributes**: a feature that needs product
   data gets a setting where the merchant picks one of their own attributes.

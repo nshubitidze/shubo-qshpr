@@ -22,8 +22,11 @@ use Shubo\Qshpr\Model\Status\StatusUpdater;
  *
  * Quickshipper does not sign webhooks, so the body is only a hint: its
  * OrderId says which delivery to bring up to date, and StatusUpdater reads
- * the order from Quickshipper itself. The key in the URL keeps strangers
- * from making the store call Quickshipper.
+ * the order from Quickshipper itself. The installation's webhook key keeps
+ * strangers from making the store call Quickshipper. It arrives in the
+ * "apikey" header (the webhook's apiKey, sent on every call) or, for
+ * webhooks connected before that and until the header is seen working in
+ * production, in the URL.
  *
  * Answers: 200 handled (or not one of our bookings), 400 unreadable body,
  * 403 wrong key, 503 try again later (Quickshipper did not answer, the order
@@ -33,6 +36,7 @@ use Shubo\Qshpr\Model\Status\StatusUpdater;
 class Status implements HttpPostActionInterface, CsrfAwareActionInterface
 {
     private const string PARAM_KEY = 'key';
+    private const string HEADER_KEY = 'apikey';
 
     /**
      * @param RequestInterface $request
@@ -60,10 +64,9 @@ class Status implements HttpPostActionInterface, CsrfAwareActionInterface
     public function execute(): Raw
     {
         try {
-            $expected = $this->config->getWebhookKey();
-            $given = (string)$this->request->getParam(self::PARAM_KEY, '');
+            $keyFrom = $this->keyFrom($this->config->getWebhookKey());
 
-            if ($expected === '' || !hash_equals($expected, $given)) {
+            if ($keyFrom === null) {
                 $this->logger->warning('webhook: refused a call with a missing or wrong key');
 
                 return $this->answer(HttpResponse::STATUS_CODE_403, 'forbidden');
@@ -78,7 +81,12 @@ class Status implements HttpPostActionInterface, CsrfAwareActionInterface
             }
 
             $result = $this->statusUpdater->update($qshprOrderId);
-            $this->logger->info(sprintf('webhook: Quickshipper order %d → %s', $qshprOrderId, $result->value));
+            $this->logger->info(sprintf(
+                'webhook: Quickshipper order %d → %s (key from %s)',
+                $qshprOrderId,
+                $result->value,
+                $keyFrom
+            ));
 
             return $this->answer($result->httpStatus(), $result->value);
         } catch (\Throwable $e) {
@@ -89,6 +97,27 @@ class Status implements HttpPostActionInterface, CsrfAwareActionInterface
 
             return $this->answer(HttpResponse::STATUS_CODE_503, 'try again');
         }
+    }
+
+    /**
+     * Where the call's correct key came from ("header" or "url"); null when neither has it.
+     *
+     * @param string $expected The installation's webhook key; '' when the store was never connected.
+     * @return string|null
+     */
+    private function keyFrom(string $expected): ?string
+    {
+        if ($expected === '') {
+            return null;
+        }
+
+        $header = $this->request instanceof HttpRequest ? $this->request->getHeader(self::HEADER_KEY) : false;
+
+        if (is_string($header) && hash_equals($expected, $header)) {
+            return 'header';
+        }
+
+        return hash_equals($expected, (string)$this->request->getParam(self::PARAM_KEY, '')) ? 'url' : null;
     }
 
     /**
@@ -127,7 +156,7 @@ class Status implements HttpPostActionInterface, CsrfAwareActionInterface
     }
 
     /**
-     * Quickshipper cannot send Magento's form key; the URL key is checked in execute().
+     * Quickshipper cannot send Magento's form key; the webhook key is checked in execute().
      *
      * @param RequestInterface $request
      * @return InvalidRequestException|null

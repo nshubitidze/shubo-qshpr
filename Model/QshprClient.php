@@ -37,8 +37,12 @@ class QshprClient
     /** Webhook type for order status changes. */
     public const string WEBHOOK_TYPE = 'OrderStatusChange';
 
-    /** How often Quickshipper repeats a webhook call our store did not accept. */
-    private const int WEBHOOK_RETRIES = 3;
+    /**
+     * How often Quickshipper repeats a webhook call our store did not accept:
+     * its maximum, after 1, 5, 15, 30 and 60 minutes (production; the sandbox
+     * sends once).
+     */
+    private const int WEBHOOK_RETRIES = 5;
 
     /**
      * @param CurlFactory $curlFactory
@@ -186,34 +190,37 @@ class QshprClient
      * Register a webhook: Quickshipper POSTs to $callbackUrl on every order status change.
      *
      * @param string $callbackUrl
+     * @param string $apiKey Sent back by Quickshipper in an "apikey" header on every call.
      * @param int|null $storeId
      * @return int The new webhook's id.
      * @throws QshprApiException
      */
-    public function createWebhook(string $callbackUrl, ?int $storeId = null): int
+    public function createWebhook(string $callbackUrl, string $apiKey, ?int $storeId = null): int
     {
         $answer = $this->request(Endpoint::CreateWebhook, [], $storeId, [
             'callBackUrl' => $callbackUrl,
             'type' => self::WEBHOOK_TYPE,
             'maxRetryCount' => self::WEBHOOK_RETRIES,
+            'apiKey' => $apiKey,
         ]);
 
         return is_numeric($answer['webhookId'] ?? null) ? (int)$answer['webhookId'] : 0;
     }
 
     /**
-     * Point an existing webhook at $callbackUrl and switch it on.
+     * Point an existing webhook at $callbackUrl, give it $apiKey and switch it on.
      *
      * Quickshipper spells the field callbackUrl here but callBackUrl when
      * creating and listing.
      *
      * @param int $webhookId
      * @param string $callbackUrl
+     * @param string $apiKey Sent back by Quickshipper in an "apikey" header on every call.
      * @param int|null $storeId
      * @return void
      * @throws QshprApiException
      */
-    public function updateWebhook(int $webhookId, string $callbackUrl, ?int $storeId = null): void
+    public function updateWebhook(int $webhookId, string $callbackUrl, string $apiKey, ?int $storeId = null): void
     {
         $this->request(Endpoint::UpdateWebhook, [], $storeId, [
             'id' => $webhookId,
@@ -221,6 +228,7 @@ class QshprClient
             'type' => self::WEBHOOK_TYPE,
             'isActive' => true,
             'maxRetryCount' => self::WEBHOOK_RETRIES,
+            'apiKey' => $apiKey,
         ]);
     }
 
