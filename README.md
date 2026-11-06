@@ -16,8 +16,9 @@ OnWay and other couriers in Georgia.
   and by a polling cron; they appear as shipment notes and in the customer's
   Track popup. Cancel and "Book Courier Again" buttons on the shipment page;
   optional cancel on full refund.
-- **Also:** who pays Quickshipper's service fee (customer or shop), cash on
-  delivery only with couriers that collect cash, car delivery by a product
+- **Also:** who pays Quickshipper's service fee (customer or shop), no cash on
+  delivery (Quickshipper has no such service: cash payment is hidden for its
+  couriers), car delivery by a product
   attribute you choose / weight / default, the prepaid balance in the admin
   header, Georgian translation.
 

@@ -15,7 +15,6 @@ use Magento\Shipping\Model\Rate\ResultFactory;
 use Magento\Shipping\Model\Tracking\Result\Status;
 use Magento\Shipping\Model\Tracking\Result\StatusFactory;
 use Psr\Log\LoggerInterface;
-use Shubo\Qshpr\Model\CashOnDelivery\CashOnDelivery;
 use Shubo\Qshpr\Model\Delivery\DeliveryLog;
 use Shubo\Qshpr\Model\Money;
 use Shubo\Qshpr\Model\OrderStatus;
@@ -52,7 +51,6 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
      * @param DeliveryLog $deliveryLog
      * @param StatusFactory $trackStatusFactory
      * @param CourierLogos $courierLogos
-     * @param CashOnDelivery $cashOnDelivery
      * @param Config $config
      * @param array<string, mixed> $data
      */
@@ -66,7 +64,6 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
         private readonly DeliveryLog $deliveryLog,
         private readonly StatusFactory $trackStatusFactory,
         private readonly CourierLogos $courierLogos,
-        private readonly CashOnDelivery $cashOnDelivery,
         private readonly Config $config,
         array $data = [],
     ) {
@@ -113,7 +110,6 @@ class Qshpr extends AbstractCarrier implements CarrierInterface
             $method->setCost(Money::toGelAmount($offer->amount));
             $result->append($method);
             $this->courierLogos->remember($offer->providerId, $offer->logoUrl);
-            $this->cashOnDelivery->remember($offer->providerId, $offer->collectsCash);
         }
 
         return $result;

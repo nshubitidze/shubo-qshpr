@@ -21,9 +21,8 @@ Quickshipper API details (fields, envelopes, statuses) are in the
    `<providerId>_<priceKey>` (e.g. `2_asap`; the price id lower-cased,
    alphanumeric), title `Courier – speed`. Price shown =
    `Offer::customerPrice()` (fee in or out, per setting); cost = full amount.
-5. Each offer's logo and "can collect cash" are remembered per courier id
-   (`CourierLogos`, `CashOnDelivery`), because a Magento rate keeps only its
-   standard fields.
+5. Each offer's logo is remembered per courier id (`CourierLogos`), because
+   a Magento rate keeps only its standard fields.
 
 Any failure (timeout, API error, bug) gives no Quickshipper option and
 leaves the other carriers working. Luma re-asks prices when street or city
@@ -49,11 +48,11 @@ captured at checkout), `AutoDispatchTrigger` marks it due here.
 3. **Reuse** a booking that no shipment carries (`findUnlinkedBooking`):
    read it from Quickshipper; over (cancelled, failed, 404) → `abandoned`,
    book anew; a Draft → confirm; active → reuse, nothing new is paid.
-4. **Book new**: drop-off point (recorded or geocoded), shipment weight,
-   car rule, **fresh price** for the same courier (a checkout quote is not
-   a reservation; the courier must still be offered, else the shipment
-   stops), cash to collect if the payment is cash on delivery (courier must
-   say `hasCashOnDelivery`), `OrderPayloadBuilder` → `POST /v1/Order`.
+4. **Book new**: an order paid in cash on delivery stops here (no
+   Quickshipper call); drop-off point (recorded or geocoded), shipment
+   weight, car rule, **fresh price** for the same courier (a checkout quote
+   is not a reservation; the courier must still be offered, else the
+   shipment stops), `OrderPayloadBuilder` → `POST /v1/Order`.
 5. Quickshipper took the price → **record the booking first**
    (`drafted` or `dispatched`), then confirm a Draft
    (`POST /v1/Order/confirm`), then add the track (number + link) and an
@@ -126,11 +125,14 @@ read again next run.
 
 ## 8. Cash on delivery
 
-`Observer/HideCashOnDelivery` hides the cash payment methods
-(`CashOnDelivery::paymentMethods`, default `cashondelivery`) when the chosen
-courier cannot collect cash (unknown counts as cannot). At booking, a cash
-order asks the courier to collect the shipped goods + the delivery charged
-to the customer; the fresh price must still say the courier collects cash.
+Quickshipper has no cash-on-delivery service (its answer of 2026-11-06),
+so no Quickshipper courier collects money. `Observer/HideCashOnDelivery`
+hides the cash payment methods (`CashOnDelivery::paymentMethods`, default
+`cashondelivery`) whenever a Quickshipper courier is chosen; the courier's
+`hasCashOnDelivery` flag is ignored. An order paid in cash anyway (placed
+before this, or its payment changed) is not booked: Submit Shipment stops
+with a message and the shipment is not saved. `cashOnDelivery` is never
+sent.
 
 ## 9. Car delivery
 

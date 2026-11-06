@@ -39,6 +39,9 @@ The admin message says what happened and whether the shipment was saved.
   the dashboard before submitting again; a retry reuses a booking the module
   recorded.
 - "Another shipment of this order is booking" — wait and reload.
+- "Quickshipper has no cash-on-delivery service" — the order is paid in cash
+  on delivery (placed before cash was hidden for Quickshipper couriers, or
+  its payment was changed). Ship it another way, or take the payment first.
 - Store Information phone missing — Quickshipper needs the pickup phone.
 
 ## Status not updating

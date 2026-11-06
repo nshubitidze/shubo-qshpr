@@ -50,7 +50,7 @@ changes `Config`.
 
 | Field | Default | Scope | Notes |
 |---|---|---|---|
-| `auto_dispatch` Book Courier Automatically | 0 | D W | Fully paid orders are booked and shipped by the cron; unpaid (cash) orders wait for Ship |
+| `auto_dispatch` Book Courier Automatically | 0 | D W | Fully paid orders are booked and shipped by the cron; unpaid orders (e.g. bank transfer) wait for Ship |
 | `cancel_on_refund` Cancel Delivery on Full Refund | 0 | D W | |
 | `connect_status_updates` (button) | — | D W | Registers / re-points the status webhook for this store's URL |
 
@@ -73,7 +73,8 @@ applied (see `decisions.md`).
 
 - `Geocoder` → `providers`: `<item name="<code>">` with `label` + `model`.
 - `CashOnDelivery` → `paymentMethods`: payment method codes that mean "pay
-  the courier in cash" (default `cashondelivery`).
+  the courier in cash" (default `cashondelivery`): hidden at checkout for
+  Quickshipper couriers, and an order paid with one is not booked.
 - `LogSanitizer` → extra masked keys and the body limit (the built-in
   secrets cannot be removed).
 - `NominatimProvider` → `timeoutSeconds` (5).

@@ -98,7 +98,7 @@
                 <field id="auto_dispatch" translate="label comment" type="select" sortOrder="77"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Book Courier Automatically</label>
-                    <comment>Yes: once an order is fully paid, the courier the customer chose is booked and the order is shipped within a minute or two, without pressing Ship. Orders without a paid invoice (e.g. cash on delivery) still wait for Ship. If booking fails, it is tried up to three times and then you are notified in the admin. No: book with Ship → Submit Shipment.</comment>
+                    <comment>Yes: once an order is fully paid, the courier the customer chose is booked and the order is shipped within a minute or two, without pressing Ship. Orders without a paid invoice (e.g. bank transfer) still wait for Ship. If booking fails, it is tried up to three times and then you are notified in the admin. No: book with Ship → Submit Shipment.</comment>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
 
