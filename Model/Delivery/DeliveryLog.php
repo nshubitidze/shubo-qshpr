@@ -81,6 +81,7 @@ class DeliveryLog
      * @param float|null $latitude Drop-off point the customer was quoted for.
      * @param float|null $longitude
      * @param int $paidAmount Shipping the customer paid, in tetri.
+     * @param string|null $scheduledTime Delivery time the customer chose (UTC ISO 8601); null = as soon as possible.
      * @return int Row id.
      */
     public function recordQuote(
@@ -92,9 +93,11 @@ class DeliveryLog
         ?float $latitude,
         ?float $longitude,
         int $paidAmount,
+        ?string $scheduledTime = null,
     ): int {
         $connection = $this->resource->getConnection();
         $connection->insert($this->table(), [
+            'scheduled_time' => $scheduledTime,
             'order_id' => $orderId,
             'increment_id' => $incrementId,
             'store_id' => $storeId,
@@ -405,6 +408,28 @@ class DeliveryLog
     }
 
     /**
+     * Automatic booking waits: the delivery is due again in $seconds.
+     *
+     * Only a row still due and quoted moves, so a booking made meanwhile is not touched.
+     *
+     * @param int $entityId
+     * @param int $seconds
+     * @return void
+     */
+    public function postponeDispatch(int $entityId, int $seconds): void
+    {
+        $this->resource->getConnection()->update(
+            $this->table(),
+            ['dispatch_due_at' => new \Zend_Db_Expr(sprintf('NOW() + INTERVAL %d SECOND', max(0, $seconds)))],
+            [
+                'entity_id = ?' => $entityId,
+                'state = ?' => self::STATE_QUOTED,
+                'dispatch_due_at IS NOT NULL',
+            ]
+        );
+    }
+
+    /**
      * Automatic booking is no longer due (the order cannot be shipped any
      * more, or the setting was switched off).
      *
@@ -451,6 +476,7 @@ class DeliveryLog
      * @param int $paidAmount Shipping the customer paid for this delivery, in tetri.
      * @param Booking $booking
      * @param string $state STATE_DRAFTED or STATE_DISPATCHED.
+     * @param string|null $scheduledTime Delivery time booked (UTC ISO 8601); null = as soon as possible.
      * @return int Row id.
      */
     public function recordBooking(
@@ -463,9 +489,11 @@ class DeliveryLog
         int $paidAmount,
         Booking $booking,
         string $state,
+        ?string $scheduledTime = null,
     ): int {
         $connection = $this->resource->getConnection();
         $connection->insert($this->table(), [
+            'scheduled_time' => $scheduledTime,
             'order_id' => $orderId,
             'increment_id' => $incrementId,
             'store_id' => $storeId,

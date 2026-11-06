@@ -11,6 +11,7 @@ before changing the class. This file is the map.
 | Quickshipper API | `Model/QshprClient` (all HTTP; validates every answer shape, throws `QshprApiException`), `Model/Endpoint` (enum of operations + paths), `Model/TokenCache` (bearer token, encrypted in Magento's cache, at most a day), `Model/OrderStatus` (enum of Quickshipper order statuses), `Model/LogSanitizer` (masks secrets in logged payloads) |
 | Geocoding | `Model/Geocoding/Geocoder` (picks the provider set in the admin, accepts only building-level answers in the typed city, caches), `ProviderInterface`, `NominatimProvider`, `AddressNormalizer` (Georgian registry-style street → what OpenStreetMap matches), `Address`, `Location`, `Precision` |
 | Checkout rates | `Model/Carrier/Qshpr` (the carrier), `Model/Rates/RateQuoter` (address → `GET /v1/Order/fees` → offers, cached 10 min per trip), `Offer`, `CarDeliveryRule`, `CourierLogos`; `Plugin/ShippingMethodLogo` (logo URL as extension attribute `shubo_qshpr_logo_url`), `Plugin/QuoteItemCarDeliveryAttribute` |
+| Delivery time and opening hours | `Model/Schedule/DeliverySlots` (slots, labels), `ScheduledCouriers` (which couriers take a time, cached from price answers), `OpeningHours` (next opening, closed days); `Plugin/ShippingMethodDeliveryTime`, `Plugin/SaveDeliveryTime`, `Model/Ui/DeliveryTimeConfigProvider`, `Model/Checkout/DeliveryTimeLayout`, `Observer/ShowDeliveryTime` |
 | Cash on delivery | `Model/CashOnDelivery/CashOnDelivery` (which payment codes are cash), `Observer/HideCashOnDelivery` |
 | Delivery record | `Model/Delivery/DeliveryLog` (the table, states, every query), `Booking` (value object), `ChosenCourier` (courier + price id read back from the order's shipping method), `OrderNotes`, `ShipmentNotes` |
 | Booking | `Plugin/ShipmentRegisterPlugin` (admin Submit Shipment) → `Model/Dispatch/Dispatcher` (fresh price, create, Draft confirm, reuse, track), `OrderPayloadBuilder` (body of `POST /v1/Order`), `DeliveryLock`, `ShippedQuantities`; `Observer/LinkShipment`, `Observer/ReleaseDeliveryLock` |
@@ -31,7 +32,9 @@ before changing the class. This file is the map.
 | `beforeSetLayout` on `Magento\Shipping\Block\Adminhtml\View` | `etc/adminhtml/di.xml` | Cancel / Book Courier Again buttons |
 | `afterModelToDataObject` on `Magento\Quote\Model\Cart\ShippingMethodConverter` | `etc/di.xml` (global: checkout asks through `webapi_rest`) | courier logo |
 | `afterGetProductAttributes` on `Magento\Quote\Model\Quote\Config` | `etc/di.xml` | loads the merchant's car-delivery attribute with cart items |
+| `sales_model_service_quote_submit_before` | `etc/events.xml` (global) | `ShowDeliveryTime` (time in the shipping description) |
 | `sales_model_service_quote_submit_success` | `etc/events.xml` (global) | `RecordDelivery` |
+| `beforeSaveAddressInformation` on `Magento\Checkout\Model\ShippingInformationManagement` | `etc/di.xml` | `SaveDeliveryTime` (checks the chosen time) |
 | `checkout_submit_all_after` | `etc/events.xml` | `RecordMultishippingDeliveries` (multi-address checkout) |
 | `sales_order_shipment_save_after` | `etc/events.xml` | `LinkShipment` (inside the save transaction) |
 | `sales_order_shipment_save_commit_after` | `etc/events.xml` | `ReleaseDeliveryLock` |
@@ -58,7 +61,8 @@ Quickshipper login), `shipment_id` (null until the shipment is saved),
 `charged_amount` + `service_fee` (what Quickshipper took),
 `qshpr_order_id` (unique) + `qshpr_order_no` (tracking number, e.g.
 `SQ42609`) + `tracking_url`, `state`, `qshpr_status`, `courier_name`,
-`status_changed_at` / `status_checked_at`, `alerted_at`,
+`status_changed_at` / `status_checked_at`, `alerted_at`, `scheduled_time`
+(the delivery time booked, UTC; null = as soon as possible),
 `dispatch_due_at` / `dispatch_attempts` / `last_error` (automatic booking).
 
 ### States (`DeliveryLog::STATE_*`) — forward only

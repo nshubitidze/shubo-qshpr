@@ -12,6 +12,11 @@ OnWay and other couriers in Georgia.
 - **Booking:** Submit Shipment in the admin books the chosen courier with a
   fresh price and puts Quickshipper's order number and tracking link on the
   shipment. Optionally, paid orders are booked and shipped automatically.
+- **Delivery time and opening hours:** for couriers that take one (e.g.
+  Wolt), the customer can choose a delivery time slot; the shop's opening
+  hours and closed days (e.g. weekends) decide the slots, and while the shop
+  is closed no courier is promised or booked "as soon as possible". The
+  chosen time shows in the order e-mails and on the shipment.
 - **Following:** delivery statuses arrive by webhook (one button to connect)
   and by a polling cron; they appear as shipment notes and in the customer's
   Track popup. Cancel and "Book Courier Again" buttons on the shipment page;
@@ -62,7 +67,8 @@ are cron jobs.
    phone. Quickshipper needs all of them.
 4. Optional: Book Courier Automatically, Cancel Delivery on Full Refund,
    Customer Pays Quickshipper's Service Fee, courier logos, car delivery,
-   balance in the admin header, the geocoder (a self-hosted Nominatim is
+   Opening Hours and Delivery Time (delivery times need your Quickshipper
+   dashboard to assign couriers automatically), balance in the admin header, the geocoder (a self-hosted Nominatim is
    recommended for busy shops).
 5. Press **Connect status updates** (Delivery Status Updates) (the store must be
    reachable from the internet) for statuses within seconds; without it they

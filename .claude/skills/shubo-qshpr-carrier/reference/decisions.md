@@ -111,6 +111,33 @@ change needs to, say so and get agreement first.
 - **HTTP status codes from `Laminas\Http\Response::STATUS_CODE_*`**, not
   module constants or bare numbers.
 
+## Delivery time and opening hours
+
+- **A delivery time only for couriers Quickshipper flags**
+  (`hasScheduledDelivery`), never by the price id; the price shown stays the
+  instant price, as Quickshipper quotes the same amount for a time.
+- **Slots within the shop's opening hours**, because Quickshipper does not
+  publish courier hours or how far ahead each accepts a time.
+- **Confirming a Draft replaces the time** with the confirm time + the
+  courier's average time to the pickup — by design, Quickshipper said
+  (2026-11-06). A delivery time therefore needs the dashboard's automatic
+  assignment. The module does not refuse to confirm (the customer would get
+  no courier at all); the setting's help says so and the merchant gets an
+  order note when it happens.
+- **The time travels in the shipping description** (appended before the
+  order is saved), the one text Magento already shows in every e-mail,
+  admin page and PDF — no template or layout changes. Day and month names
+  in it are English.
+- **Book Courier Again keeps a time still ahead**: the customer was
+  promised it; a passed time becomes as soon as possible with a note.
+- **Own opening hours and closed days**: Magento's "Store Hours of
+  Operation" is free text and its locale "Weekend Days" is for calendars
+  (default Saturday and Sunday — using it would close every shop at the
+  weekend). One set of hours for every open day; a day can only be open or
+  closed.
+- **Only automatic booking waits for opening**; the admin Ship button is
+  never blocked (the merchant may hand a parcel over outside the hours).
+
 ## Access
 
 - **Quickshipper's standard OAuth client in production too** (2026-11-06):

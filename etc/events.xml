@@ -2,6 +2,9 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
     <!-- Global: orders are placed in the frontend and webapi_rest areas. -->
+    <event name="sales_model_service_quote_submit_before">
+        <observer name="shubo_qshpr_show_delivery_time" instance="Shubo\Qshpr\Observer\ShowDeliveryTime"/>
+    </event>
     <event name="sales_model_service_quote_submit_success">
         <observer name="shubo_qshpr_record_delivery" instance="Shubo\Qshpr\Observer\RecordDelivery"/>
     </event>

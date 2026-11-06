@@ -26,6 +26,7 @@ use Shubo\Qshpr\Model\OrderStatus;
 use Shubo\Qshpr\Model\QshprClient;
 use Shubo\Qshpr\Model\Rates\CarDeliveryRule;
 use Shubo\Qshpr\Model\Rates\Offer;
+use Shubo\Qshpr\Model\Schedule\DeliverySlots;
 use Shubo\Qshpr\Model\Ui\ConfigProvider;
 use Shubo\Qshpr\Model\WeightConverter;
 
@@ -83,6 +84,11 @@ class Dispatcher
     private const string QUERY_TRUE = 'true';
 
     /**
+     * A chosen delivery time closer than this is booked as "as soon as possible".
+     */
+    private const int SCHEDULE_MIN_LEAD_SECONDS = 900;
+
+    /**
      * @param QshprClient $client
      * @param DeliveryLog $deliveryLog
      * @param OrderPayloadBuilder $payloadBuilder
@@ -94,6 +100,7 @@ class Dispatcher
      * @param ShippedQuantities $shippedQuantities
      * @param CashOnDelivery $cashOnDelivery
      * @param CarDeliveryRule $carDeliveryRule
+     * @param DeliverySlots $deliverySlots
      * @param LoggerInterface $logger Bound to ShuboQshprLogger in di.xml.
      */
     public function __construct(
@@ -108,6 +115,7 @@ class Dispatcher
         private readonly ShippedQuantities $shippedQuantities,
         private readonly CashOnDelivery $cashOnDelivery,
         private readonly CarDeliveryRule $carDeliveryRule,
+        private readonly DeliverySlots $deliverySlots,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -395,7 +403,19 @@ class Dispatcher
         );
         $weightKg = $this->shipmentWeightKg($shipment, $storeId);
         $carDelivery = $this->carDeliveryRule->forShipment($shipment, $storeId, $weightKg);
-        [$fee, $price] = $this->freshPrice($order, $address, $chosen, $latitude, $longitude, $weightKg, $carDelivery);
+        // Book Courier Again keeps the time of the delivery it replaces while that is still ahead.
+        $scheduledTime = $this->scheduledTime($order, $quoted ?? $replaced);
+        [$fee, $price] = $this->freshPrice(
+            $order,
+            $address,
+            $chosen,
+            $latitude,
+            $longitude,
+            $weightKg,
+            $carDelivery,
+            $scheduledTime
+        );
+
         $payload = $this->payloadBuilder->build(
             $address,
             $latitude,
@@ -408,6 +428,7 @@ class Dispatcher
             $weightKg,
             $storeId,
             carDelivery: $carDelivery,
+            scheduledTime: $scheduledTime,
         );
 
         try {
@@ -453,11 +474,16 @@ class Dispatcher
             $latitude,
             $longitude,
             $booking,
-            $isDraft ? DeliveryLog::STATE_DRAFTED : DeliveryLog::STATE_DISPATCHED
+            $isDraft ? DeliveryLog::STATE_DRAFTED : DeliveryLog::STATE_DISPATCHED,
+            $scheduledTime
         );
 
         if ($isDraft) {
             $this->confirm($order, $qshprOrderId, $booking->qshprOrderNo, $rowId);
+
+            if ($scheduledTime !== null) {
+                $this->checkTimeKept($order, $qshprOrderId, $scheduledTime);
+            }
         } else {
             $this->recordFirstStatus($rowId, $created['orderStatus'] ?? null);
         }
@@ -650,6 +676,87 @@ class Dispatcher
     }
 
     /**
+     * The delivery time the customer chose, if it is still ahead.
+     *
+     * Taken from the order's delivery row from checkout, or for Book Courier
+     * Again from the delivery being replaced. A time that has passed (or is
+     * about to) is booked as "as soon as possible", and the merchant is told
+     * in the order's history.
+     *
+     * @param Order $order
+     * @param array<string,mixed>|null $quoted The delivery row the time is taken from.
+     * @return string|null UTC ISO 8601; null for "as soon as possible".
+     */
+    private function scheduledTime(Order $order, ?array $quoted): ?string
+    {
+        $chosen = is_string($quoted['scheduled_time'] ?? null) ? $quoted['scheduled_time'] : '';
+        $at = $chosen !== '' ? strtotime($chosen) : false;
+
+        if ($at === false) {
+            return null;
+        }
+
+        if ($at - time() >= self::SCHEDULE_MIN_LEAD_SECONDS) {
+            return $chosen;
+        }
+
+        $order->addCommentToStatusHistory(__(
+            'The delivery time the customer chose (%1, store time) has passed; the courier is booked for as soon '
+            . 'as possible.',
+            $this->deliverySlots->describe($chosen, (int)$order->getStoreId())
+        ));
+
+        return null;
+    }
+
+    /**
+     * Tell the merchant when confirming a Draft dropped the delivery time.
+     *
+     * Quickshipper keeps a Draft's scheduledTime, but its confirm has been
+     * seen to replace it with "now" (the courier then comes at once). The
+     * booking stands either way; the merchant learns it from the order's
+     * history and can contact the customer. A failed read is only logged.
+     *
+     * @param Order $order
+     * @param int $qshprOrderId
+     * @param string $scheduledTime The time booked (UTC ISO 8601).
+     * @return void
+     */
+    private function checkTimeKept(Order $order, int $qshprOrderId, string $scheduledTime): void
+    {
+        try {
+            $answer = $this->client->getOrder($qshprOrderId, (int)$order->getStoreId());
+        } catch (QshprApiException $e) {
+            $this->logger->warning(sprintf(
+                'dispatch: could not check the delivery time of Quickshipper order %d: %s',
+                $qshprOrderId,
+                $e->getMessage()
+            ));
+
+            return;
+        }
+
+        $kept = is_string($answer['order']['scheduledTime'] ?? null) ? $answer['order']['scheduledTime'] : '';
+
+        if ($kept !== '' && strtotime($kept) === strtotime($scheduledTime)) {
+            return;
+        }
+
+        $this->logger->warning(sprintf(
+            'dispatch: order %s: Quickshipper changed the delivery time %s to %s when the Draft was confirmed',
+            $order->getIncrementId(),
+            $scheduledTime,
+            $kept !== '' ? $kept : '-'
+        ));
+        $order->addCommentToStatusHistory(__(
+            'Quickshipper dropped the delivery time the customer chose (%1, store time) when the booking was '
+            . 'confirmed: the courier comes as soon as possible. Tell the customer. Delivery times are kept when '
+            . 'your Quickshipper dashboard assigns the courier automatically instead of "after confirmation".',
+            $this->deliverySlots->describe($scheduledTime, (int)$order->getStoreId())
+        ));
+    }
+
+    /**
      * Weight of the shipped items in kg (0 when products have no weight).
      *
      * @param Shipment $shipment
@@ -687,6 +794,7 @@ class Dispatcher
      * @param float $longitude
      * @param float $weightKg
      * @param bool $carDelivery Ask for couriers with a car, as the booking will.
+     * @param string|null $scheduledTime Ask the courier's price for this time (UTC ISO 8601).
      * @return array{array<string, mixed>, array<string, mixed>} The courier's fees entry and the price.
      * @throws DispatchException
      */
@@ -698,6 +806,7 @@ class Dispatcher
         float $longitude,
         float $weightKg,
         bool $carDelivery,
+        ?string $scheduledTime,
     ): array {
         $storeId = (int)$order->getStoreId();
 
@@ -725,6 +834,13 @@ class Dispatcher
 
         if ($carDelivery) {
             $query['CarDelivery'] = self::QUERY_TRUE;
+        }
+
+        // With a time, Quickshipper answers for that one courier only, with
+        // its single price for the time (id "custom" or "CustomDate").
+        if ($scheduledTime !== null) {
+            $query['ScheduleDelivery.ProviderId'] = $chosen->providerId;
+            $query['ScheduleDelivery.ScheduledDate'] = $scheduledTime;
         }
 
         try {
@@ -889,6 +1005,7 @@ class Dispatcher
      * @param float $longitude
      * @param Booking $booking
      * @param string $state DeliveryLog::STATE_DRAFTED or STATE_DISPATCHED.
+     * @param string|null $scheduledTime The delivery time booked, for a new row (a quoted row has it already).
      * @return int|null Row id, null when the write failed.
      */
     private function record(
@@ -899,6 +1016,7 @@ class Dispatcher
         float $longitude,
         Booking $booking,
         string $state,
+        ?string $scheduledTime = null,
     ): ?int {
         try {
             if ($quoted !== null && $this->deliveryLog->markBooked((int)$quoted['entity_id'], $booking, $state)) {
@@ -914,7 +1032,8 @@ class Dispatcher
                 $longitude,
                 $booking->paidAmount,
                 $booking,
-                $state
+                $state,
+                $scheduledTime
             );
         } catch (\Throwable $e) {
             $this->logger->critical(sprintf(

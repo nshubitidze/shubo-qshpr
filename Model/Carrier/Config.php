@@ -50,6 +50,14 @@ class Config
     private const string FIELD_CAR_DELIVERY_ATTRIBUTE = 'car_delivery_attribute';
     private const string FIELD_CAR_DELIVERY_DEFAULT = 'car_delivery_default';
     private const string FIELD_CAR_DELIVERY_FROM_WEIGHT = 'car_delivery_from_weight';
+    private const string FIELD_SCHEDULE_ENABLED = 'schedule/enabled';
+    private const string FIELD_SCHEDULE_DAYS = 'schedule/days';
+    private const string FIELD_SCHEDULE_SLOT_HOURS = 'schedule/slot_hours';
+    private const string FIELD_SCHEDULE_NOTICE_HOURS = 'schedule/notice_hours';
+    private const string FIELD_OPENING_HOURS_KEPT = 'opening_hours/kept';
+    private const string FIELD_OPENS_AT = 'opening_hours/opens_at';
+    private const string FIELD_CLOSES_AT = 'opening_hours/closes_at';
+    private const string FIELD_CLOSED_DAYS = 'opening_hours/closed_days';
     private const string FIELD_PICKUP_LATITUDE = 'pickup_latitude';
     private const string FIELD_PICKUP_LONGITUDE = 'pickup_longitude';
     private const string GEOCODING_GROUP = 'geocoding/';
@@ -81,6 +89,19 @@ class Config
      * a booking takes 7–10 s.
      */
     private const int DEFAULT_TIMEOUT_SECONDS = 20;
+
+    /**
+     * Scheduled delivery and opening hours fallbacks for missing or zero
+     * settings: tomorrow and the day after, two-hour slots, two hours'
+     * notice, open 10:00 to 20:00.
+     */
+    private const int DEFAULT_SCHEDULE_DAYS = 2;
+    private const int DEFAULT_SCHEDULE_SLOT_HOURS = 2;
+    private const int DEFAULT_SCHEDULE_NOTICE_HOURS = 2;
+    private const int DEFAULT_OPENS_AT = 10;
+    private const int DEFAULT_CLOSES_AT = 20;
+    private const int HOURS_PER_DAY = 24;
+    private const int DAYS_PER_WEEK = 7;
 
     /**
      * @param ScopeConfigInterface $scopeConfig
@@ -348,6 +369,117 @@ class Config
         $value = trim((string)$this->getValue(self::FIELD_CAR_DELIVERY_FROM_WEIGHT, $storeId));
 
         return is_numeric($value) && (float)$value > 0 ? (float)$value : null;
+    }
+
+    /**
+     * Whether customers may choose a delivery time for couriers that take one.
+     *
+     * @param int|null $storeId
+     * @return bool
+     */
+    public function isScheduleEnabled(?int $storeId = null): bool
+    {
+        return (bool)$this->getValue(self::FIELD_SCHEDULE_ENABLED, $storeId);
+    }
+
+    /**
+     * How many days ahead a delivery time can be chosen (today counts as day 0).
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleDays(?int $storeId = null): int
+    {
+        $days = (int)$this->getValue(self::FIELD_SCHEDULE_DAYS, $storeId);
+
+        return $days > 0 ? $days : self::DEFAULT_SCHEDULE_DAYS;
+    }
+
+    /**
+     * Length of one delivery slot in hours.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleSlotHours(?int $storeId = null): int
+    {
+        $hours = (int)$this->getValue(self::FIELD_SCHEDULE_SLOT_HOURS, $storeId);
+
+        return $hours > 0 ? $hours : self::DEFAULT_SCHEDULE_SLOT_HOURS;
+    }
+
+    /**
+     * Hours between placing the order and the earliest slot that can be chosen.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getScheduleNoticeHours(?int $storeId = null): int
+    {
+        $hours = (int)$this->getValue(self::FIELD_SCHEDULE_NOTICE_HOURS, $storeId);
+
+        return $hours > 0 ? $hours : self::DEFAULT_SCHEDULE_NOTICE_HOURS;
+    }
+
+    /**
+     * Whether couriers are booked only while the shop is open.
+     *
+     * Outside the hours, checkout says when the courier comes and automatic booking waits.
+     *
+     * @param int|null $storeId
+     * @return bool
+     */
+    public function keepsOpeningHours(?int $storeId = null): bool
+    {
+        return (bool)$this->getValue(self::FIELD_OPENING_HOURS_KEPT, $storeId);
+    }
+
+    /**
+     * Hour (store time) the shop opens; delivery slots start from it.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getOpensAt(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_OPENS_AT, $storeId);
+
+        return $hour > 0 && $hour < self::HOURS_PER_DAY ? $hour : self::DEFAULT_OPENS_AT;
+    }
+
+    /**
+     * Hour (store time) the shop closes; delivery slots end by it.
+     *
+     * @param int|null $storeId
+     * @return int
+     */
+    public function getClosesAt(?int $storeId = null): int
+    {
+        $hour = (int)$this->getValue(self::FIELD_CLOSES_AT, $storeId);
+
+        return $hour > 0 && $hour <= self::HOURS_PER_DAY ? $hour : self::DEFAULT_CLOSES_AT;
+    }
+
+    /**
+     * Weekdays the shop is closed, as PHP's "w" numbers (0 = Sunday … 6 = Saturday).
+     *
+     * Every day marked closed is treated as none closed, so a setting
+     * mistake never closes the shop for good.
+     *
+     * @param int|null $storeId
+     * @return list<int>
+     */
+    public function getClosedDays(?int $storeId = null): array
+    {
+        $days = [];
+
+        foreach (explode(',', (string)$this->getValue(self::FIELD_CLOSED_DAYS, $storeId)) as $day) {
+            if (ctype_digit(trim($day)) && (int)$day < self::DAYS_PER_WEEK) {
+                $days[(int)$day] = (int)$day;
+            }
+        }
+
+        return count($days) < self::DAYS_PER_WEEK ? array_values($days) : [];
     }
 
     /**

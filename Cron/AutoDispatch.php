@@ -8,10 +8,15 @@ use Psr\Log\LoggerInterface;
 use Shubo\Qshpr\Model\Delivery\DeliveryLog;
 use Shubo\Qshpr\Model\Dispatch\AutoShipper;
 use Shubo\Qshpr\Model\Dispatch\DeliveryLock;
+use Shubo\Qshpr\Model\Schedule\OpeningHours;
 
 /**
  * Books and ships paid orders whose delivery is due for automatic booking
  * (see AutoDispatchTrigger), one order at a time under its DeliveryLock.
+ *
+ * An "as soon as possible" delivery of a shop that keeps opening hours is
+ * not booked while the shop is closed: it is made due again at opening.
+ * A delivery with a chosen time is booked at once, for that time.
  */
 class AutoDispatch
 {
@@ -26,12 +31,14 @@ class AutoDispatch
      * @param AutoShipper $autoShipper
      * @param DeliveryLock $lock
      * @param LoggerInterface $logger Bound to ShuboQshprLogger in di.xml.
+     * @param OpeningHours $openingHours
      */
     public function __construct(
         private readonly DeliveryLog $deliveryLog,
         private readonly AutoShipper $autoShipper,
         private readonly DeliveryLock $lock,
         private readonly LoggerInterface $logger,
+        private readonly OpeningHours $openingHours,
     ) {
     }
 
@@ -45,6 +52,10 @@ class AutoDispatch
         foreach ($this->deliveryLog->findDispatchDue(self::BATCH_LIMIT) as $due) {
             $orderId = (int)$due['order_id'];
             $row = null;
+
+            if ($this->waitsForOpening($due)) {
+                continue;
+            }
 
             if (!$this->lock->acquire($orderId, self::LOCK_WAIT_SECONDS)) {
                 continue;
@@ -68,6 +79,34 @@ class AutoDispatch
                 $this->lock->release($orderId);
             }
         }
+    }
+
+    /**
+     * Postpone an "as soon as possible" delivery while its shop is closed.
+     *
+     * @param array<string,mixed> $due
+     * @return bool Whether it waits.
+     */
+    private function waitsForOpening(array $due): bool
+    {
+        if (($due['scheduled_time'] ?? null) !== null) {
+            return false;
+        }
+
+        $opening = $this->openingHours->nextOpening((int)$due['store_id']);
+
+        if ($opening === null) {
+            return false;
+        }
+
+        $this->deliveryLog->postponeDispatch((int)$due['entity_id'], $opening->getTimestamp() - time());
+        $this->logger->info(sprintf(
+            'auto-dispatch: order %s waits until the shop opens (%s)',
+            (string)$due['increment_id'],
+            $opening->format(\DateTimeInterface::ATOM)
+        ));
+
+        return true;
     }
 
     /**
