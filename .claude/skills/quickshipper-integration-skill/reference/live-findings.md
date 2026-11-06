@@ -130,6 +130,13 @@ what was seen, tagged [vendor 2026-11-06].
 
 ## Reading orders — `GET /v1/Order`
 
+- `GET /v1/Order/list?IntegrationOrderId=<ref>&Limit=5&Page=1` →
+  `{page, limit, items[], itemsCount, hasItems, …envelope}`; an item is
+  `{id, orderNo, status, createDate, addressFrom, addressTo, customerName,
+  customerPhone, externalOrderId, trackingUrl}`. The filter is an **exact,
+  case-sensitive** match (a prefix or other casing finds nothing). No match →
+  `success:true` with `items: []`. [live 2026-11-06]
+
 - Unknown id → HTTP 200, `success:false`, body 404 "Order not found" (also
   for another shop's order). [live 2026-09-29]
 - `courier` fields: `courierId`, `courierName`, `courierPhoneNumber`,
@@ -155,9 +162,15 @@ what was seen, tagged [vendor 2026-11-06].
   and proxy headers. Treat the body as a hint and re-read the order; a
   secret in the URL keeps strangers out. [live 2026-10-01] There is no HMAC;
   a webhook registered with an `apiKey` gets it in an `apikey` header on
-  every call. [vendor 2026-11-06] Header not yet seen live. Calls come from
-  fixed IPs (list on request). [vendor 2026-11-06]
-- **No webhook for a Draft's creation.** Webhooks for a change our own call
+  every call. [vendor 2026-11-06] Seen live: the header carries exactly the
+  registered `apiKey`, on every call, also with no key in the URL; set on an
+  existing webhook with `PUT /v1/Webhook {…, apiKey}`. (It reached us
+  through a Cloudflare tunnel as `Apikey`; read it case-insensitively.)
+  [live 2026-11-06] Calls come from fixed IPs (list on request)
+  [vendor 2026-11-06]; all sandbox calls so far from `217.147.231.134`.
+  [live 2026-11-06]
+- **No webhook for a Draft's creation**, but an order created directly as
+  `ReadyForPickup` (no courier) does send one. [live 2026-11-06] Webhooks for a change our own call
   causes arrive **while that call is still running**; calls answered 503
   were **not retried** within 20 minutes despite `maxRetryCount: 3`.
   Take the status our call causes from its own answer. [live 2026-10-01]
@@ -176,8 +189,13 @@ what was seen, tagged [vendor 2026-11-06].
   statuses: create an order **without a courier** through the Delivery API
   and change its status by hand in the dashboard (`test.quickshipper.ge`);
   the webhook is still sent. The order must be created through the API.
-  [vendor 2026-11-06] Not yet tried; how to create an order without a
-  courier is not stated.
+  [vendor 2026-11-06] Tried: `POST /v1/Order` **without `provider`**
+  (`autoAssign: false`) creates a `ReadyForPickup` order with `provider:
+  null`, `orderPrice` 0, service fee 0, `deliveryType` "Scheduled"; the
+  balance does not change. `POST /v1/Order/status` then moves it through
+  `Assigned`, `Pickup`, `OnTheWay`, `Delivered` (no dashboard needed); each
+  change sends one webhook within ~1 s, with the full status log so far.
+  Tool: `qshpr-status-probe.php`. [live 2026-11-06]
 - The waybill (`GET /v1/Order/waybill`) fails on the sandbox server
   ("Unable to load shared library 'libwkhtmltox'"). [live 2026-10-01]
 - `GET /v1/Order/custom-fields` for a shop without custom fields answers
