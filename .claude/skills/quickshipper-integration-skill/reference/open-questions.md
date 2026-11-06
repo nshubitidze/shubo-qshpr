@@ -33,8 +33,6 @@ Asked by e-mail and not (fully) answered on 2026-11-06 is marked *(asked)*.
   order left in and is the price returned? *(asked, not answered)*
 - Is `scheduledTime` the pickup or the delivery time? Can a Draft keep its
   `scheduledTime` through `/confirm`? *(asked)*
-- `GET /v1/Order/list` by `IntegrationOrderId`: answer shape, exact match?
-- How to create an order without a courier (for status tests).
 - Courier hours and how far ahead a delivery can be scheduled; what happens
   to an `asap` order outside the courier's hours.
 - Can a recipient's SMS be switched off for API orders? *(asked, not
@@ -43,8 +41,8 @@ Asked by e-mail and not (fully) answered on 2026-11-06 is marked *(asked)*.
 
 ## Webhooks
 
-- The `apikey` header: exact name and casing; does `PUT /v1/Webhook` add an
-  `apiKey` to an existing webhook? *(asked)* The IP list.
+- The `apikey` header's casing on the wire (seen only through a Cloudflare
+  tunnel); the full IP list. *(asked)*
 - Timeout and which answers count as delivered (and so are not retried).
 - Can a webhook be limited to some orders, deleted, or managed in the
   dashboard? (Several environments on one account all receive every order.)
