@@ -71,9 +71,16 @@ change needs to, say so and get agreement first.
 ## After booking
 
 - **Status: webhook as a trigger + re-read, plus polling.** Webhooks are not
-  signed, so their body is never trusted; a key in the URL keeps strangers
-  from making the store call Quickshipper. Polling every 15 minutes covers
-  lost webhooks and stores without a public URL.
+  signed, so their body is never trusted; the installation's webhook key
+  keeps strangers from making the store call Quickshipper. Polling every 15
+  minutes covers lost webhooks and stores without a public URL.
+- **The webhook key travels in the `apikey` header** (2026-11-06):
+  registered as the webhook's `apiKey`, which Quickshipper sends on every
+  call — kept out of URLs, which end up in logs and in Quickshipper's
+  webhook list. The URL copy (`?key=`) is still registered and accepted
+  until the header is seen working in production, so webhooks connected
+  before keep working; then it is dropped. **5 retries**, Quickshipper's
+  maximum.
 - **Delivered = a shipment note only**; cancelled or failed after shipping →
   merchant alerted, shipment kept (Magento cannot undo a shipment).
 - **Cancel keeps the shipment and removes the track**, so the customer's

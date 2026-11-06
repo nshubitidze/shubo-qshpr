@@ -93,9 +93,12 @@ read again next run.
 ## 6. Status updates
 
 - **Webhook** `POST /qshpr/webhook/status?key=…` (`Controller/Webhook/Status`):
-  key checked with `hash_equals` (403), body only names the `OrderId`.
-  Not one of our rows → 200 without calling Quickshipper. Answers 200 / 400 /
-  403 / 503 (Quickshipper retries non-accepted calls).
+  the webhook key from the `apikey` header, else from the URL, checked with
+  `hash_equals` (403); the log line says which (`key from header|url`).
+  The body only names the `OrderId`. Not one of our rows → 200 without
+  calling Quickshipper. Answers 200 / 400 / 403 / 503 (Quickshipper retries
+  non-accepted calls up to 5 times, after 1, 5, 15, 30, 60 min — production;
+  the sandbox sends once).
 - **Polling** `Cron/StatusSync` every 15 min: shipped rows still under way,
   50 per run; no change for 7 days → merchant told once, polling stops.
 - Both → `StatusUpdater::update()`: under the lock, `GET /v1/Order`; new
@@ -104,8 +107,9 @@ read again next run.
   comment + admin notification. Repeated or late calls change nothing.
 - The **Connect** button (`WebhookRegistrar`) creates the installation's
   webhook key and registers `<base URL>qshpr/webhook/status?key=…` for
-  `OrderStatusChange`, or re-points the webhook registered for the same
-  address (Quickshipper cannot delete webhooks).
+  `OrderStatusChange` with the key also as the webhook's `apiKey` and 5
+  retries, or re-points the webhook registered for the same address
+  (Quickshipper cannot delete webhooks).
 - Magento's Track popup (`Qshpr::getTrackingInfo()`): link to Quickshipper's
   tracking page; the status goes into the carrier line because the popup
   shows a link or a status, not both.
