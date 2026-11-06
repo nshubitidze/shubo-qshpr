@@ -19,6 +19,9 @@ Every fact carries its source:
   production https://delivery.quickshipper.app/swagger/v1/swagger.json.
 - **[live YYYY-MM-DD]** — observed against the sandbox; wins when it
   disagrees with the other two.
+- **[vendor YYYY-MM-DD]** — Quickshipper's written answer to our questions
+  (by e-mail). Trusted over [docs] and [spec]; where it is about production
+  or contradicts [live], confirm it live before relying on it.
 
 ## Files
 
@@ -43,12 +46,14 @@ For any field not described here, read the spec.
 4. **Money is decimal GEL**, and a price's `amount` already includes
    Quickshipper's `serviceFee`. [live]
 5. **The delivery price is taken from the prepaid balance when the order is
-   created**; whether it is created as a Draft depends on the merchant's
-   dashboard setting. [live]
+   created** (sandbox; production billing is not confirmed — see
+   `reference/open-questions.md`); whether it is created as a Draft depends
+   on the merchant's dashboard setting. [live]
 
 ## Credentials
 
-Only Quickshipper's public sandbox OAuth client
-(`DeliveryApiClient:DeliveryApiSecret`, from the docs) may appear in code.
-Merchant logins, the production client and the ApiKey are secrets: never in
-a repository, always masked in logs.
+Quickshipper's OAuth client `DeliveryApiClient:DeliveryApiSecret` is public
+(docs) and, Quickshipper says, currently the same in production
+[vendor 2026-11-06]; it may appear in code. Merchant logins, the ApiKey and
+a webhook's `apiKey` are secrets: never in a repository, always masked in
+logs.
