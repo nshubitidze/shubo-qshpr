@@ -80,8 +80,14 @@ change needs to, say so and get agreement first.
   Track link does not lead to a cancelled order. No customer emails.
 - **Cancel on full refund is a setting, default off.** A paid order can only
   be refunded in Magento, so the refund is the trigger.
-- **Cash on delivery**: cash payment hidden for couriers that cannot collect
-  (unknown counts as cannot); the courier collects shipped goods + delivery.
+- **No cash on delivery with Quickshipper couriers** (2026-11-06; replaces
+  "cash for couriers that collect it"): Quickshipper says it has no COD
+  service, although its API still has `cashOnDelivery` and
+  `hasCashOnDelivery`. Cash payment is hidden for every Quickshipper
+  courier, a cash order is never booked and `cashOnDelivery` is never sent
+  — a courier who hands over the goods without collecting would cost the
+  shop the whole order. Revisit only when Quickshipper confirms a working
+  COD service.
 
 ## Product data and store
 

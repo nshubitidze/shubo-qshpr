@@ -14,7 +14,8 @@ use Shubo\Qshpr\Model\Delivery\ChosenCourier;
 
 /**
  * Hides cash-on-delivery payment methods at checkout when the customer chose
- * a Quickshipper courier that cannot collect cash.
+ * a Quickshipper courier: Quickshipper has no cash-on-delivery service, so
+ * nobody would collect the money (see CashOnDelivery).
  *
  * Runs on payment_method_is_active, which every payment method fires when
  * checkout lists the methods; the list is asked again after the customer
@@ -31,7 +32,7 @@ class HideCashOnDelivery implements ObserverInterface
     }
 
     /**
-     * Mark the method unavailable when it is cash and the courier cannot collect it.
+     * Mark the method unavailable when it is cash and the delivery is a Quickshipper courier.
      *
      * @param Observer $observer
      * @return void
@@ -51,9 +52,7 @@ class HideCashOnDelivery implements ObserverInterface
             return;
         }
 
-        $chosen = ChosenCourier::fromShippingMethod((string)$quote->getShippingAddress()->getShippingMethod());
-
-        if ($chosen !== null && !$this->cashOnDelivery->courierCollectsCash($chosen->providerId)) {
+        if (ChosenCourier::fromShippingMethod((string)$quote->getShippingAddress()->getShippingMethod()) !== null) {
             $result->setData('is_available', false);
         }
     }

@@ -359,6 +359,15 @@ class Dispatcher
      */
     private function bookNew(Shipment $shipment, Order $order, ChosenCourier $chosen, ?array $replaced = null): Booking
     {
+        if ($this->cashOnDelivery->isCashPayment((string)$order->getPayment()?->getMethod())) {
+            // Checkout hides cash for Quickshipper couriers; this catches orders
+            // placed before that, or with the payment changed afterwards.
+            throw new DispatchException(__(
+                'The customer pays in cash on delivery, but Quickshipper has no cash-on-delivery service: the '
+                . 'courier would not collect the money. The shipment was not saved; ship this order another way.'
+            ));
+        }
+
         $storeId = (int)$order->getStoreId();
         $orderId = (int)$order->getId();
         $address = $order->getShippingAddress();
@@ -387,16 +396,6 @@ class Dispatcher
         $weightKg = $this->shipmentWeightKg($shipment, $storeId);
         $carDelivery = $this->carDeliveryRule->forShipment($shipment, $storeId, $weightKg);
         [$fee, $price] = $this->freshPrice($order, $address, $chosen, $latitude, $longitude, $weightKg, $carDelivery);
-        $cash = $this->cashToCollect($shipment, $order, $isExtraDelivery ? 0 : $paidAmount);
-
-        if ($cash !== null && ($fee['hasCashOnDelivery'] ?? false) !== true) {
-            throw new DispatchException(__(
-                'The customer pays in cash on delivery, but Quickshipper says %1 cannot collect cash now. '
-                . 'The shipment was not saved; ship this order another way.',
-                (string)($fee['providerName'] ?? $chosen->providerId)
-            ));
-        }
-
         $payload = $this->payloadBuilder->build(
             $address,
             $latitude,
@@ -408,7 +407,6 @@ class Dispatcher
             (float)$order->getBaseSubtotal(),
             $weightKg,
             $storeId,
-            cashOnDelivery: $cash,
             carDelivery: $carDelivery,
         );
 
@@ -649,41 +647,6 @@ class Dispatcher
         }
 
         return [$location->latitude, $location->longitude];
-    }
-
-    /**
-     * What the courier collects at the door; null unless the order is paid in cash on delivery.
-     *
-     * The goods: the shipped items' share of their row totals (tax included,
-     * discounts taken off), so a partial shipment collects for what it
-     * carries. The delivery: what the customer was charged for it, on the
-     * delivery the customer paid for (not on an extra one).
-     *
-     * @param Shipment $shipment
-     * @param Order $order
-     * @param int $deliveryPrice Shipping the customer was charged for this delivery, in tetri.
-     * @return array{deliveryPrice: int, parcelPrice: int}|null In tetri.
-     */
-    private function cashToCollect(Shipment $shipment, Order $order, int $deliveryPrice): ?array
-    {
-        if (!$this->cashOnDelivery->isCashPayment((string)$order->getPayment()?->getMethod())) {
-            return null;
-        }
-
-        $parcel = 0.0;
-
-        foreach ($shipment->getAllItems() as $item) {
-            $orderItem = $item->getOrderItem();
-
-            if ($orderItem === null || $orderItem->isDummy(true) || (float)$orderItem->getQtyOrdered() <= 0) {
-                continue;
-            }
-
-            $rowTotal = (float)$orderItem->getBaseRowTotalInclTax() - (float)$orderItem->getBaseDiscountAmount();
-            $parcel += $rowTotal * (float)$item->getQty() / (float)$orderItem->getQtyOrdered();
-        }
-
-        return ['deliveryPrice' => $deliveryPrice, 'parcelPrice' => Money::toTetri($parcel)];
     }
 
     /**

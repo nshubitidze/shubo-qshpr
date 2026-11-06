@@ -11,7 +11,7 @@ before changing the class. This file is the map.
 | Quickshipper API | `Model/QshprClient` (all HTTP; validates every answer shape, throws `QshprApiException`), `Model/Endpoint` (enum of operations + paths), `Model/TokenCache` (bearer token, encrypted in Magento's cache, at most a day), `Model/OrderStatus` (enum of Quickshipper order statuses), `Model/LogSanitizer` (masks secrets in logged payloads) |
 | Geocoding | `Model/Geocoding/Geocoder` (picks the provider set in the admin, accepts only building-level answers in the typed city, caches), `ProviderInterface`, `NominatimProvider`, `AddressNormalizer` (Georgian registry-style street → what OpenStreetMap matches), `Address`, `Location`, `Precision` |
 | Checkout rates | `Model/Carrier/Qshpr` (the carrier), `Model/Rates/RateQuoter` (address → `GET /v1/Order/fees` → offers, cached 10 min per trip), `Offer`, `CarDeliveryRule`, `CourierLogos`; `Plugin/ShippingMethodLogo` (logo URL as extension attribute `shubo_qshpr_logo_url`), `Plugin/QuoteItemCarDeliveryAttribute` |
-| Cash on delivery | `Model/CashOnDelivery/CashOnDelivery` (which payment codes are cash, which couriers collect cash), `Observer/HideCashOnDelivery` |
+| Cash on delivery | `Model/CashOnDelivery/CashOnDelivery` (which payment codes are cash), `Observer/HideCashOnDelivery` |
 | Delivery record | `Model/Delivery/DeliveryLog` (the table, states, every query), `Booking` (value object), `ChosenCourier` (courier + price id read back from the order's shipping method), `OrderNotes`, `ShipmentNotes` |
 | Booking | `Plugin/ShipmentRegisterPlugin` (admin Submit Shipment) → `Model/Dispatch/Dispatcher` (fresh price, create, Draft confirm, reuse, track), `OrderPayloadBuilder` (body of `POST /v1/Order`), `DeliveryLock`, `ShippedQuantities`; `Observer/LinkShipment`, `Observer/ReleaseDeliveryLock` |
 | Automatic booking | `Observer/MarkPaidForDispatch` + `Observer/RecordDelivery` → `Model/Dispatch/AutoDispatchTrigger` (marks due) → `Cron/AutoDispatch` → `Model/Dispatch/AutoShipper` |
@@ -101,7 +101,7 @@ against the order it loaded before the wait.
 |---|---|---|
 | Bearer token (encrypted; key = HMAC of environment + credentials) | `shubo_qshpr_token_` (config cache tag) | ≤ 1 day |
 | Prices per trip (key = HMAC of the whole query) | `shubo_qshpr_fees_` / `SHUBO_QSHPR_RATES` | 10 min |
-| Courier logos, cash ability per courier | `shubo_qshpr_logo_`, `shubo_qshpr_cod_` / `SHUBO_QSHPR_RATES` | 7 days, 1 day; every price answer refreshes |
+| Courier logos | `shubo_qshpr_logo_` / `SHUBO_QSHPR_RATES` | 7 days; every price answer refreshes |
 | Geocoder answers (key = HMAC of the query, no address text) | `shubo_qshpr_geocode_` / `SHUBO_QSHPR_GEOCODE` | found 30 days, not found 1 day, errors not cached |
 | Balance per login | `shubo_qshpr_balance_` / `SHUBO_QSHPR_BALANCE` | 5 min, failures 1 min |
 

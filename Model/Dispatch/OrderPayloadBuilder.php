@@ -9,7 +9,6 @@ use Magento\Sales\Api\Data\OrderAddressInterface;
 use Shubo\Qshpr\Exception\DispatchException;
 use Shubo\Qshpr\Exception\PickupNotConfiguredException;
 use Shubo\Qshpr\Model\Carrier\Config;
-use Shubo\Qshpr\Model\Money;
 
 /**
  * Builds the body of POST /v1/Order: where the courier collects, where it
@@ -48,8 +47,6 @@ class OrderPayloadBuilder
      * @param float $cartAmount Order subtotal in GEL.
      * @param float $weightKg Shipment weight; 0 when unknown.
      * @param int|null $storeId
-     * @param array<string,int>|null $cashOnDelivery deliveryPrice and parcelPrice in tetri: what the
-     *     courier collects for an order paid in cash at the door; null otherwise.
      * @param bool $carDelivery Ask for a courier with a car.
      * @return array<string, mixed>
      * @throws DispatchException When the pickup point is incomplete or the customer has no phone.
@@ -65,7 +62,6 @@ class OrderPayloadBuilder
         float $cartAmount,
         float $weightKg,
         ?int $storeId,
-        ?array $cashOnDelivery = null,
         bool $carDelivery = false,
     ): array {
         try {
@@ -122,13 +118,6 @@ class OrderPayloadBuilder
 
         if ($weightKg > 0) {
             $payload['cartWeight'] = $weightKg;
-        }
-
-        if ($cashOnDelivery !== null) {
-            $payload['cashOnDelivery'] = [
-                'deliveryPrice' => Money::toGelAmount($cashOnDelivery['deliveryPrice']),
-                'parcelPrice' => Money::toGelAmount($cashOnDelivery['parcelPrice']),
-            ];
         }
 
         if ($carDelivery) {
