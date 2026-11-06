@@ -51,6 +51,7 @@ class RateQuoter
      * @param Json $json
      * @param WeightConverter $weightConverter
      * @param CarDeliveryRule $carDeliveryRule
+     * @param ParcelSizes $parcelSizes
      * @param LoggerInterface $logger Bound to ShuboQshprLogger in di.xml.
      */
     public function __construct(
@@ -62,6 +63,7 @@ class RateQuoter
         private readonly Json $json,
         private readonly WeightConverter $weightConverter,
         private readonly CarDeliveryRule $carDeliveryRule,
+        private readonly ParcelSizes $parcelSizes,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -118,10 +120,12 @@ class RateQuoter
             $query['CartWeight'] = $weightKg;
         }
 
-        // Part of the query, so also part of the cache key.
+        // Car delivery and the boxes are part of the query, so also of the cache key.
         if ($this->carDeliveryRule->forRateRequest($request, $storeId, $weightKg)) {
             $query['CarDelivery'] = self::QUERY_TRUE;
         }
+
+        $query += $this->parcelSizes->toQuery($this->parcelSizes->forRateRequest($request));
 
         $fees = $this->fees($query, $storeId);
 

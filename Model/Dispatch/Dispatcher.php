@@ -26,6 +26,7 @@ use Shubo\Qshpr\Model\OrderStatus;
 use Shubo\Qshpr\Model\QshprClient;
 use Shubo\Qshpr\Model\Rates\CarDeliveryRule;
 use Shubo\Qshpr\Model\Rates\Offer;
+use Shubo\Qshpr\Model\Rates\ParcelSizes;
 use Shubo\Qshpr\Model\Schedule\DeliverySlots;
 use Shubo\Qshpr\Model\Ui\ConfigProvider;
 use Shubo\Qshpr\Model\WeightConverter;
@@ -101,6 +102,7 @@ class Dispatcher
      * @param CashOnDelivery $cashOnDelivery
      * @param CarDeliveryRule $carDeliveryRule
      * @param DeliverySlots $deliverySlots
+     * @param ParcelSizes $parcelSizes
      * @param LoggerInterface $logger Bound to ShuboQshprLogger in di.xml.
      */
     public function __construct(
@@ -116,6 +118,7 @@ class Dispatcher
         private readonly CashOnDelivery $cashOnDelivery,
         private readonly CarDeliveryRule $carDeliveryRule,
         private readonly DeliverySlots $deliverySlots,
+        private readonly ParcelSizes $parcelSizes,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -405,6 +408,7 @@ class Dispatcher
         $carDelivery = $this->carDeliveryRule->forShipment($shipment, $storeId, $weightKg);
         // Book Courier Again keeps the time of the delivery it replaces while that is still ahead.
         $scheduledTime = $this->scheduledTime($order, $quoted ?? $replaced);
+        $parcels = $this->parcelSizes->forShipment($shipment, $storeId);
         [$fee, $price] = $this->freshPrice(
             $order,
             $address,
@@ -413,7 +417,8 @@ class Dispatcher
             $longitude,
             $weightKg,
             $carDelivery,
-            $scheduledTime
+            $scheduledTime,
+            $parcels
         );
 
         $payload = $this->payloadBuilder->build(
@@ -429,6 +434,7 @@ class Dispatcher
             $storeId,
             carDelivery: $carDelivery,
             scheduledTime: $scheduledTime,
+            parcels: $parcels,
         );
 
         try {
@@ -795,6 +801,7 @@ class Dispatcher
      * @param float $weightKg
      * @param bool $carDelivery Ask for couriers with a car, as the booking will.
      * @param string|null $scheduledTime Ask the courier's price for this time (UTC ISO 8601).
+     * @param array<int,array<string,float>> $parcels The boxes (cm), as the booking sends them.
      * @return array{array<string, mixed>, array<string, mixed>} The courier's fees entry and the price.
      * @throws DispatchException
      */
@@ -807,6 +814,7 @@ class Dispatcher
         float $weightKg,
         bool $carDelivery,
         ?string $scheduledTime,
+        array $parcels = [],
     ): array {
         $storeId = (int)$order->getStoreId();
 
@@ -842,6 +850,8 @@ class Dispatcher
             $query['ScheduleDelivery.ProviderId'] = $chosen->providerId;
             $query['ScheduleDelivery.ScheduledDate'] = $scheduledTime;
         }
+
+        $query += $this->parcelSizes->toQuery($parcels);
 
         try {
             $response = $this->client->getFees($query, $storeId);

@@ -243,6 +243,34 @@
                     </field>
                 </group>
 
+                <group id="parcel_size" translate="label comment" type="text" sortOrder="92"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Parcel Size</label>
+                    <comment>Tells Quickshipper the size of each box, with the price request and the booking. Quickshipper says size changes the price for some couriers. Choose your store's own product attributes that hold a product's length, width and height (the module adds none). Each unit of a product with all three sizes is one box; products without sizes (small items) are left out, and at most 50 boxes are sent. Leave any of the three on "-- Not used --" to send no sizes.</comment>
+
+                    <field id="length_attribute" translate="label" type="select" sortOrder="10"
+                           showInDefault="1" showInWebsite="0" showInStore="0">
+                        <label>Length Attribute</label>
+                        <source_model>Shubo\Qshpr\Model\Config\Source\NumberProductAttribute</source_model>
+                    </field>
+                    <field id="width_attribute" translate="label" type="select" sortOrder="20"
+                           showInDefault="1" showInWebsite="0" showInStore="0">
+                        <label>Width Attribute</label>
+                        <source_model>Shubo\Qshpr\Model\Config\Source\NumberProductAttribute</source_model>
+                    </field>
+                    <field id="height_attribute" translate="label" type="select" sortOrder="30"
+                           showInDefault="1" showInWebsite="0" showInStore="0">
+                        <label>Height Attribute</label>
+                        <source_model>Shubo\Qshpr\Model\Config\Source\NumberProductAttribute</source_model>
+                    </field>
+                    <field id="unit" translate="label comment" type="select" sortOrder="40"
+                           showInDefault="1" showInWebsite="0" showInStore="0">
+                        <label>Size Unit</label>
+                        <comment>The unit your size attributes are kept in. Quickshipper takes centimetres; other units are converted.</comment>
+                        <source_model>Shubo\Qshpr\Model\Config\Source\SizeUnit</source_model>
+                    </field>
+                </group>
+
                 <group id="geocoding" translate="label comment" type="text" sortOrder="100"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Address Geocoding</label>

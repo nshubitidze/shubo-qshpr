@@ -45,6 +45,9 @@
                     <closes_at>20</closes_at>
                     <closed_days></closed_days>
                 </opening_hours>
+                <parcel_size>
+                    <unit>cm</unit>
+                </parcel_size>
                 <geocoding>
                     <geocoder>nominatim</geocoder>
                     <nominatim_url>https://nominatim.openstreetmap.org</nominatim_url>

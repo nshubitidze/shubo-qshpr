@@ -134,10 +134,11 @@
         <plugin name="shubo_qshpr_takes_time" type="Shubo\Qshpr\Plugin\ShippingMethodDeliveryTime"/>
     </type>
 
-    <!-- The merchant's "Car Delivery Attribute" loaded with cart items. Global:
+    <!-- The merchant's "Car Delivery Attribute" and parcel size attributes loaded with cart items. Global:
          rates are collected in the storefront, the REST API and the admin. -->
     <type name="Magento\Quote\Model\Quote\Config">
         <plugin name="shubo_qshpr_car_delivery_attribute" type="Shubo\Qshpr\Plugin\QuoteItemCarDeliveryAttribute"/>
+        <plugin name="shubo_qshpr_parcel_size_attributes" type="Shubo\Qshpr\Plugin\QuoteItemParcelSizeAttributes"/>
     </type>
 
     <!-- Payment methods where the courier collects the money. Magento's own
