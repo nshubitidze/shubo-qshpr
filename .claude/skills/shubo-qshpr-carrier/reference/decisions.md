@@ -97,3 +97,11 @@ change needs to, say so and get agreement first.
   built-in secrets are always masked.
 - **HTTP status codes from `Laminas\Http\Response::STATUS_CODE_*`**, not
   module constants or bare numbers.
+
+## Access
+
+- **Quickshipper's standard OAuth client in production too** (2026-11-06):
+  Quickshipper says every shop currently uses `DeliveryApiClient` /
+  `DeliveryApiSecret` with its own dashboard login, so the merchant enters
+  only the login. The admin's API Client fields stay as an optional
+  override in case Quickshipper issues per-shop clients later.

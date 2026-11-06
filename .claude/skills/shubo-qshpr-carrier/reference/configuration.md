@@ -14,7 +14,7 @@ Scope: D = default, W = website, S = store view.
 | `title` Title | Quickshipper | D W S | Carrier title above the courier options |
 | `sandbox_mode` Sandbox Mode | 1 | D W | Picks the sandbox or production hosts, client and dashboard |
 | `username` Login Email, `password` Password | — | D W | The merchant's Quickshipper dashboard login (OAuth password grant). Password encrypted, sensitive |
-| `production_client_id`, `production_client_secret` | — | D W (production only) | Issued by Quickshipper. The sandbox client (`sandbox_client_id/secret`) is Quickshipper's **public** test client, set in `config.xml`, no admin field |
+| `production_client_id`, `production_client_secret` | — (standard client) | D W (production only) | Optional. Empty = Quickshipper's standard client `DeliveryApiClient` (`Config::STANDARD_CLIENT_*`), the same for every shop and, per Quickshipper (2026-11-06), currently production's too; fill in only if Quickshipper issues the account its own. The sandbox client (`sandbox_client_id/secret`) is the same public client, set in `config.xml`, no admin field |
 | `api_timeout` API Timeout (s) | 20 | D W | 0/empty → 20. Quickshipper's first answer after a quiet period can take >10 s |
 | `debug` Debug Logging | 0 | D W | Full masked payloads in the log |
 | `show_balance` Show Balance in Admin Header | 0 | D | Header dropdown with the prepaid balance, top-up and settings links |
