@@ -15,7 +15,8 @@ Quickshipper API details (fields, envelopes, statuses) are in the
    priced at 0,0.
 3. `GET /v1/Order/fees` with pickup and drop-off street, city and
    coordinates, `CartAmount`, `CartWeight` (kg, if > 0) and
-   `CarDelivery=true` when `CarDeliveryRule` says so. Cached 10 minutes per
+   `CarDelivery=true` when `CarDeliveryRule` says so, `Parcels[i]` when
+   `ParcelSizes` finds boxes (§12). Cached 10 minutes per
    identical query.
 4. One `Offer` per active courier and GEL price (cheapest first). Method code
    `<providerId>_<priceKey>` (e.g. `2_asap`; the price id lower-cased,
@@ -197,4 +198,25 @@ null):
    already passed (or under 15 minutes ahead) is booked as soon as
    possible, with an order note. If confirming a Draft replaced the time
    (`checkTimeKept`), the merchant gets an order note.
+
+## 12. Parcel size
+
+`Model/Rates/ParcelSizes`, with the store's own Length / Width / Height
+attributes chosen under "Parcel Size" (all three, or nothing is sent) and
+their unit (converted to cm). One box per unit of a product with all three
+sizes positive; products without sizes are left out; a configurable item
+takes its chosen simple product's size, any other item its own product's;
+at most 50 boxes. `Plugin/QuoteItemParcelSizeAttributes` loads the three
+attributes with cart items.
+
+- Checkout: `RateQuoter` adds `Parcels[i].Length/Width/Height` to the
+  price request (so also to its cache key).
+- Booking: `Dispatcher` takes the shipment's boxes (`forShipment`, raw
+  attribute values per store), asks the fresh price with them and books
+  them as the top-level `parcels` list (`OrderPayloadBuilder`).
+  `provider.parcelDimensions` is deprecated by Quickshipper and not sent.
+
+On the sandbox (2026-11-07) no courier's price changed with size;
+Quickshipper says some couriers price by it. `GET /v1/Order` does not
+return the sizes.
 

@@ -101,7 +101,14 @@ change needs to, say so and get agreement first.
 - **No module-created product attributes.** A store may already keep the
   data (e.g. for another shipping module). Features that need product data
   get a setting that picks one of the store's own attributes (car delivery
-  does this).
+  and parcel size do this).
+- **Parcel size: one box per unit of a sized product**, items without sizes
+  left out. Quickshipper wants each physical box separately ("never sides
+  summed"); the module cannot know how a shop packs, and a product's own
+  size is the box it ships in for the bulky items where size matters.
+  Sizes go with the price request too, so a courier that prices by size
+  quotes what is booked. At most 50 boxes, so a large order cannot make an
+  absurd request.
 - **Logos load from Quickshipper's servers** (CSP whitelisted); the admin
   header's Quickshipper mark is served from the module.
 - **The admin balance is loaded after the page** and the session lock is

@@ -84,10 +84,14 @@ supported"). [spec 2026-11-06]
   `Parcels` (+ `CartWeight`) or as a `parcelDimensionId` the customer picked
   from the possible values; `parcels` are the boxes the courier takes.
   Quickshipper says its docs on this are out of date and points to the
-  spec. [vendor 2026-11-06] Not yet tried live. `GET /v1/Order/weights`
-  (`FromLatitude…ToLongitude, ProviderId, DeliverySpeedId, CartAmount`)
-  returns weight brackets with `parcelDimensionsId`, `minWeight`,
-  `maxWeight`, `userPrice` — probably those values (unconfirmed). [spec]
+  spec. [vendor 2026-11-06] Sizes are in **cm**, one entry per physical
+  box, "never sides summed across boxes" (spec `ParcelSizeModel`,
+  2026-11-07). `GET /v1/Order/weights` (`FromLatitude…ToLongitude,
+  ProviderId, DeliverySpeedId, CartAmount`) returns a courier's weight
+  brackets with `parcelDimensionsId`, `minWeight`, `maxWeight`,
+  `userPrice`: OnWay's 85/86/87 = its price ids; Wolt and Glovo have none
+  (`success:false`). [live 2026-11-07] What the sandbox does with sizes:
+  `live-findings.md`.
 - **`CartAmount`** feeds delivery-price rules the merchant sets on the
   dashboard's integration page (price by cart amount); without such rules it
   can be ignored. [vendor 2026-11-06]
@@ -124,7 +128,10 @@ reference — stored and shown in the dashboard, not returned by
 the courier's id [live 2026-10-01]), `dropThePin`,
 `cashOnDelivery` {`deliveryPrice`, `parcelPrice`, `paymentMethod` (0/1)},
 `cartAmount`, `cartWeight`, top-level `parcelDimensionId`, `parcels[]`
-{`width`, `height`, `length`, `fields[]`} [spec 2026-11-06].
+{`width`, `height`, `length` (cm), `fields[]`} [spec 2026-11-06].
+`provider.parcelDimensions` is **deprecated** ("send sizes on Parcels
+instead; only the number of entries is used", as the parcels quantity).
+[spec 2026-11-07]
 - **`autoAssign`** is for a merchant's **own couriers** (automatic
   distribution to them; dashboard → delivery settings → "automatic order
   distribution"). It does nothing for courier companies and cannot change

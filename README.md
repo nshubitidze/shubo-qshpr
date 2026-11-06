@@ -24,7 +24,9 @@ OnWay and other couriers in Georgia.
 - **Also:** who pays Quickshipper's service fee (customer or shop), no cash on
   delivery (Quickshipper has no such service: cash payment is hidden for its
   couriers), car delivery by a product
-  attribute you choose / weight / default, the prepaid balance in the admin
+  attribute you choose / weight / default, parcel sizes from your own
+  length / width / height attributes (sent with the price request and the
+  booking), the prepaid balance in the admin
   header, Georgian translation.
 
 ## Requirements
@@ -67,7 +69,7 @@ are cron jobs.
    phone. Quickshipper needs all of them.
 4. Optional: Book Courier Automatically, Cancel Delivery on Full Refund,
    Customer Pays Quickshipper's Service Fee, courier logos, car delivery,
-   Opening Hours and Delivery Time (delivery times need your Quickshipper
+   Parcel Size, Opening Hours and Delivery Time (delivery times need your Quickshipper
    dashboard to assign couriers automatically), balance in the admin header, the geocoder (a self-hosted Nominatim is
    recommended for busy shops).
 5. Press **Connect status updates** (Delivery Status Updates) (the store must be
