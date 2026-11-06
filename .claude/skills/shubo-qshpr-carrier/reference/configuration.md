@@ -69,6 +69,27 @@ changes `Config`.
 Magento's handling fee and free-shipping cart rules are deliberately not
 applied (see `decisions.md`).
 
+## Opening hours (group `opening_hours`)
+
+| Field | Default | Scope | Notes |
+|---|---|---|---|
+| `kept` Book Couriers Only While Open | 0 | D W | While closed: titles say when the courier is booked, no "As soon as possible", automatic booking of such orders waits (flows §11) |
+| `opens_at` Opens at (hour) | 10 | D W | Store time, 1–23; delivery slots start here |
+| `closes_at` Closes at (hour) | 20 | D W | 2–24; slots end by here. Closing before opening = hours not kept |
+| `closed_days` Closed on | none | D W | Weekdays (0 = Sunday … 6 = Saturday). No slots on them; with `kept`, nothing is booked as soon as possible. All seven = none (never closed for good) |
+
+Magento's own "Store Hours of Operation" is free text and cannot be read
+by code, so the module keeps its own (see `decisions.md`).
+
+## Delivery time (group `schedule`)
+
+| Field | Default | Scope | Notes |
+|---|---|---|---|
+| `enabled` Let Customers Choose a Delivery Time | 0 | D W | Only for couriers whose price answer says `hasScheduledDelivery`. A time is kept only when the Quickshipper dashboard assigns couriers automatically |
+| `days` Days Ahead | 2 | D W | Open days after today (closed days skipped) |
+| `slot_hours` Slot Length (hours) | 2 | D W | |
+| `notice_hours` Minimum Notice (hours) | 2 | D W | |
+
 ## Extension points in `etc/di.xml` (no settings)
 
 - `Geocoder` → `providers`: `<item name="<code>">` with `label` + `model`.

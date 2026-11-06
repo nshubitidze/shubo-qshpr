@@ -35,7 +35,10 @@ change (`shipping-rates-validation-rules.js`).
 geocoder cache hit), paid shipping → row `quoted`. Never fails the order:
 errors are logged and booking geocodes again. Multi-address checkout:
 `Observer/RecordMultishippingDeliveries`. If the order is already paid (card
-captured at checkout), `AutoDispatchTrigger` marks it due here.
+captured at checkout), `AutoDispatchTrigger` marks it due here. A chosen
+delivery time goes from the quote to the row (`scheduled_time`) with an
+order note; just before, `Observer/ShowDeliveryTime` added it to the
+order's shipping description (see §11).
 
 ## 3. Booking from Submit Shipment
 
@@ -122,7 +125,8 @@ read again next run.
 - **Book Courier Again** (after cancelled or failed) → `Rebooker` →
   `Dispatcher::rebook()`: a new row linked to the same shipment. Replacing a
   cancelled delivery keeps the paid amount; replacing a failed one is an
-  extra delivery (`paid_amount` 0).
+  extra delivery (`paid_amount` 0). The replaced delivery's time is booked
+  again while it is still ahead (else as soon as possible, with a note).
 - **Cancel Delivery on Full Refund** → `Observer/CancelOnRefund` after the
   credit memo commits: cancels deliveries still under way, reports ones a
   courier has, leaves delivered ones alone.
@@ -153,3 +157,44 @@ after the page (`Controller/Adminhtml/Account/Balance`, session lock
 released before the call) with the balance string Quickshipper returns
 (never parsed), Test/Live, a top-up link to the dashboard and a settings
 link. Account = the default store view's login.
+
+## 11. Delivery time and opening hours
+
+**Opening hours** (`Model/Schedule/OpeningHours`, store time): the same
+hours every open day, plus closed weekdays ("Closed on"). With "Book
+Couriers Only While Open" on and the shop closed (`nextOpening()` not
+null):
+
+- couriers that take no time get "(after we open, Mon 10:00)" in their title;
+- the delivery time list has no "As soon as possible"
+  (`DeliveryTimeConfigProvider`), and `Plugin/SaveDeliveryTime` refuses an
+  empty time for a courier that takes one;
+- `Cron/AutoDispatch` postpones an as-soon-as-possible order to the next
+  opening (`dispatch_due_at`); an order with a time is booked at once. The
+  admin Ship button is never blocked.
+
+**Delivery time** ("Let Customers Choose a Delivery Time"):
+
+1. Rates: a courier whose price answer says `hasScheduledDelivery` is
+   remembered (`ScheduledCouriers`); `Plugin/ShippingMethodDeliveryTime`
+   marks its method `shubo_qshpr_takes_time`. The price stays the instant
+   price (Quickshipper quotes the same amount for a time).
+2. Checkout shows "Delivery time" under such a method: slots from
+   `DeliverySlots::getSlots()` — today and the next "Days Ahead" **open**
+   days, within the opening hours, "Slot Length" apart, at least "Minimum
+   Notice" ahead. A slot's value is its UTC start; its label is store time.
+3. Shipping step: `Plugin/SaveDeliveryTime` keeps the time only if it is a
+   slot offered right now and the courier takes a time
+   (`quote_address.shubo_qshpr_delivery_time`); otherwise "no longer
+   available".
+4. Order placed: `Observer/ShowDeliveryTime`
+   (`sales_model_service_quote_submit_before`) appends "(delivery Mon, 9
+   Nov, 10:00–12:00)" to the shipping description, so the e-mails,
+   shipment, invoice, admin pages and PDFs show it; `RecordDelivery` copies
+   the time to the row.
+5. Booking: the price check asks `ScheduleDelivery.ProviderId` /
+   `.ScheduledDate` and the order is created with `scheduledTime`. A time
+   already passed (or under 15 minutes ahead) is booked as soon as
+   possible, with an order note. If confirming a Draft replaced the time
+   (`checkTimeKept`), the merchant gets an order note.
+

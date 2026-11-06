@@ -27,6 +27,21 @@ Check in this order (each logs a `rates:` line or a geocoder line):
 
 Prices are cached 10 minutes per identical trip (`SHUBO_QSHPR_RATES`).
 
+## Delivery time
+
+- **No "Delivery time" list:** the setting is off, the courier's price
+  answer does not say `hasScheduledDelivery` (only flagged couriers get it;
+  re-quote after Quickshipper changes it), or no slot is left (opening hours,
+  closed days, Minimum Notice, Days Ahead).
+- **"As soon as possible" missing:** the shop is closed and "Book Couriers
+  Only While Open" is on — by design.
+- **The courier came at once instead of at the chosen time:** the
+  Quickshipper dashboard creates Drafts ("assign after confirmation"); the
+  confirm replaces the time (the order history says so). Switch the
+  dashboard to automatic assignment.
+- **Labels in English day names** ("Mon, 9 Nov") in every language: a known
+  limit.
+
 ## Booking errors (Submit Shipment)
 
 The admin message says what happened and whether the shipment was saved.
